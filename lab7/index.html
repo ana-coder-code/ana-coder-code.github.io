@@ -1,0 +1,1078 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Cozy Condiment Grocery & Cashier Simulator</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Gaegu / Quicksand for authentic cozy hand-drawn storybook feel -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg-cream: #fbf7ee;
+      --shelf-blue: #c4dbe6;
+      --shelf-light: #eaf3f8;
+      --tag-bg: #fffbf0;
+      --tag-border: #f6c85f;
+      --tag-text: #96531d;
+      --basket-green: #58ba82;
+      --basket-dark: #378b5a;
+      --note-border: #5a4634;
+    }
+
+    body {
+      font-family: 'Quicksand', 'Gaegu', sans-serif;
+      background-color: #f7eedf;
+      user-select: none;
+      -webkit-user-select: none;
+      overflow-x: hidden;
+      touch-action: manipulation;
+    }
+
+    .handwritten {
+      font-family: 'Gaegu', cursive;
+    }
+
+    /* Cute wobbly hand-drawn border effect */
+    .wobbly-box {
+      border: 2.5px solid #6b4e3d;
+      border-radius: 255px 15px 225px 15px/15px 225px 15px 255px;
+    }
+
+    .shelf-rail {
+      background: linear-gradient(180deg, #d8ebf5 0%, #b8d4e4 100%);
+      border: 3px solid #7ea3b7;
+      border-radius: 14px;
+      box-shadow: 0 4px 0 rgba(100, 140, 160, 0.25);
+    }
+
+    .price-tag {
+      background-color: #fffdf5;
+      border: 2px solid #e5b955;
+      border-radius: 7px;
+      box-shadow: 1px 2px 0px rgba(180, 140, 60, 0.3);
+      font-family: 'Gaegu', cursive;
+      font-weight: 700;
+      color: #7b4c1e;
+    }
+
+    /* Shelf items hover and bounce */
+    .grocery-item {
+      cursor: pointer;
+      transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.15s;
+    }
+    .grocery-item:hover {
+      transform: translateY(-6px) scale(1.05);
+      filter: drop-shadow(0 8px 6px rgba(0,0,0,0.12));
+    }
+    .grocery-item:active {
+      transform: scale(0.92);
+    }
+
+    /* Basket bounce */
+    .basket-bounce {
+      animation: basketHop 0.3s ease;
+    }
+    @keyframes basketHop {
+      0% { transform: scale(1); }
+      40% { transform: scale(1.08) translateY(-8px); }
+      100% { transform: scale(1); }
+    }
+
+    /* Falling floating coin effect */
+    @keyframes floatUpFade {
+      0% { transform: translateY(0) scale(0.8); opacity: 1; }
+      100% { transform: translateY(-45px) scale(1.2); opacity: 0; }
+    }
+    .floating-text {
+      animation: floatUpFade 0.8s ease-out forwards;
+      pointer-events: none;
+    }
+
+    /* Custom scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1e4d0;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbb497;
+      border-radius: 10px;
+    }
+
+    .register-btn {
+      transition: all 0.1s ease;
+      box-shadow: 0 4px 0 #5c4230;
+    }
+    .register-btn:active {
+      transform: translateY(3px);
+      box-shadow: 0 1px 0 #5c4230;
+    }
+
+    .scanner-flash {
+      animation: scanLaser 0.35s ease;
+    }
+    @keyframes scanLaser {
+      0% { background: rgba(239, 68, 68, 0); }
+      50% { background: rgba(239, 68, 68, 0.4); }
+      100% { background: rgba(239, 68, 68, 0); }
+    }
+  </style>
+</head>
+<body class="min-h-screen text-amber-950 flex flex-col items-center justify-start p-2 sm:p-4">
+
+  <!-- Top Navigation & Stats Bar -->
+  <header class="w-full max-w-2xl flex items-center justify-between px-3 py-2 bg-amber-50/90 rounded-2xl border-2 border-amber-900/20 shadow-sm mb-3">
+    <div class="flex items-center space-x-2">
+      <span class="text-2xl">🏪</span>
+      <div>
+        <h1 class="text-base sm:text-lg font-bold leading-none text-amber-900">Little Sprout Market</h1>
+        <p class="text-xs text-amber-700/80 font-semibold">Day <span id="day-counter">1</span> • Customer #<span id="customer-counter">1</span></p>
+      </div>
+    </div>
+
+    <!-- Right Controls: Audio & Money -->
+    <div class="flex items-center space-x-3">
+      <button id="sound-btn" class="p-2 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-800 text-sm font-bold flex items-center space-x-1 border border-amber-300">
+        <span id="sound-icon">🔊</span>
+      </button>
+
+      <div class="bg-amber-200/90 px-3 py-1 rounded-xl border border-amber-400 font-bold text-amber-900 flex items-center space-x-1 text-sm sm:text-base">
+        <span>💰</span>
+        <span>$<span id="money-display">0.00</span></span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Screen Container (Max Width mimicking cosy vertical tablet/phone view) -->
+  <main class="w-full max-w-2xl bg-[#fdf9f1] rounded-3xl border-4 border-[#7a5944] shadow-xl overflow-hidden relative flex flex-col min-h-[640px]">
+
+    <!-- ========================================== -->
+    <!-- VIEW 1: GROCERY CONDIMENT SHELF (PICKING)   -->
+    <!-- ========================================== -->
+    <div id="shelf-view" class="flex-1 flex flex-col p-3 sm:p-4 transition-all duration-300">
+      
+      <!-- Top Title Header matching provided image -->
+      <div class="w-full bg-[#f3f9fc] border-2 border-[#b5d3e2] rounded-2xl py-2 px-4 text-center shadow-inner mb-2">
+        <h2 class="text-2xl sm:text-3xl font-bold text-[#55433a] handwritten tracking-wide">Condiment Shelf</h2>
+      </div>
+
+      <!-- 3 Shelf Tiers Rack -->
+      <div class="flex-1 flex flex-col justify-between py-1 space-y-3">
+        
+        <!-- SHELF 1: Top (Chili Paste, Spice Bag, Sugar) -->
+        <div class="flex flex-col">
+          <div class="flex items-end justify-around px-2 pb-1.5 h-24 sm:h-28">
+            <!-- 1. Chili Paste -->
+            <div class="flex flex-col items-center">
+              <div class="grocery-item flex items-end space-x-0.5" onclick="pickItem('chili_paste', event)" title="Chili Paste ($6)">
+                <!-- 3 Jars group -->
+                <svg width="28" height="38" viewBox="0 0 40 50">
+                  <rect x="6" y="2" width="28" height="8" rx="2" fill="#9e3b26" stroke="#4c1d13" stroke-width="2"/>
+                  <rect x="4" y="10" width="32" height="38" rx="4" fill="#d9542a" stroke="#4c1d13" stroke-width="2"/>
+                  <rect x="8" y="18" width="24" height="20" rx="3" fill="#f8e7b9" stroke="#4c1d13" stroke-width="1.5"/>
+                  <circle cx="20" cy="28" r="4.5" fill="#c6471e"/>
+                </svg>
+                <svg width="28" height="38" viewBox="0 0 40 50">
+                  <rect x="6" y="2" width="28" height="8" rx="2" fill="#9e3b26" stroke="#4c1d13" stroke-width="2"/>
+                  <rect x="4" y="10" width="32" height="38" rx="4" fill="#d9542a" stroke="#4c1d13" stroke-width="2"/>
+                  <rect x="8" y="18" width="24" height="20" rx="3" fill="#f8e7b9" stroke="#4c1d13" stroke-width="1.5"/>
+                  <circle cx="20" cy="28" r="4.5" fill="#c6471e"/>
+                </svg>
+                <svg width="28" height="38" viewBox="0 0 40 50">
+                  <rect x="6" y="2" width="28" height="8" rx="2" fill="#9e3b26" stroke="#4c1d13" stroke-width="2"/>
+                  <rect x="4" y="10" width="32" height="38" rx="4" fill="#d9542a" stroke="#4c1d13" stroke-width="2"/>
+                  <rect x="8" y="18" width="24" height="20" rx="3" fill="#f8e7b9" stroke="#4c1d13" stroke-width="1.5"/>
+                  <circle cx="20" cy="28" r="4.5" fill="#c6471e"/>
+                </svg>
+              </div>
+            </div>
+
+            <!-- 2. Spices Packets -->
+            <div class="flex flex-col items-center">
+              <div class="grocery-item flex items-end space-x-1" onclick="pickItem('spices_pack', event)" title="Spice Packet ($8)">
+                <svg width="42" height="52" viewBox="0 0 60 70">
+                  <polygon points="5,15 15,4 45,4 55,15 50,66 10,66" fill="#f37c47" stroke="#602912" stroke-width="2"/>
+                  <path d="M12,8 Q30,12 48,8" stroke="#fbf3d5" stroke-width="4" stroke-dasharray="3,3" fill="none"/>
+                  <rect x="14" y="22" width="32" height="36" rx="3" fill="#ea5b2d" stroke="#5d2610" stroke-width="1.5"/>
+                  <path d="M22,34 Q30,26 38,36" stroke="#fce6b0" stroke-width="3" fill="none"/>
+                  <circle cx="30" cy="48" r="6" fill="#71a93b"/>
+                </svg>
+                <svg width="42" height="52" viewBox="0 0 60 70">
+                  <polygon points="5,15 15,4 45,4 55,15 50,66 10,66" fill="#f37c47" stroke="#602912" stroke-width="2"/>
+                  <path d="M12,8 Q30,12 48,8" stroke="#fbf3d5" stroke-width="4" stroke-dasharray="3,3" fill="none"/>
+                  <rect x="14" y="22" width="32" height="36" rx="3" fill="#ea5b2d" stroke="#5d2610" stroke-width="1.5"/>
+                  <path d="M22,34 Q30,26 38,36" stroke="#fce6b0" stroke-width="3" fill="none"/>
+                  <circle cx="30" cy="48" r="6" fill="#71a93b"/>
+                </svg>
+              </div>
+            </div>
+
+            <!-- 3. Sugar Bags -->
+            <div class="flex flex-col items-center">
+              <div class="grocery-item flex items-end space-x-1" onclick="pickItem('sugar', event)" title="Sugar ($2)">
+                <svg width="38" height="48" viewBox="0 0 50 65">
+                  <rect x="5" y="10" width="40" height="52" rx="6" fill="#b9e4f8" stroke="#366b88" stroke-width="2"/>
+                  <circle cx="15" cy="18" r="5" fill="#f1687d"/>
+                  <path d="M18,34 Q25,24 35,36" stroke="#ffffff" stroke-width="3" fill="none"/>
+                  <circle cx="28" cy="48" r="12" fill="#ffffff" opacity="0.9"/>
+                </svg>
+                <svg width="38" height="48" viewBox="0 0 50 65">
+                  <rect x="5" y="10" width="40" height="52" rx="6" fill="#b9e4f8" stroke="#366b88" stroke-width="2"/>
+                  <circle cx="15" cy="18" r="5" fill="#f1687d"/>
+                  <path d="M18,34 Q25,24 35,36" stroke="#ffffff" stroke-width="3" fill="none"/>
+                  <circle cx="28" cy="48" r="12" fill="#ffffff" opacity="0.9"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+          <!-- Shelf Board & Price Tags -->
+          <div class="shelf-rail w-full py-1.5 px-3 flex justify-around items-center">
+            <div class="price-tag px-4 py-0.5 text-lg cursor-pointer" onclick="pickItem('chili_paste', event)">$ 6</div>
+            <div class="price-tag px-4 py-0.5 text-lg cursor-pointer" onclick="pickItem('spices_pack', event)">$ 8</div>
+            <div class="price-tag px-4 py-0.5 text-lg cursor-pointer" onclick="pickItem('sugar', event)">$ 2</div>
+          </div>
+        </div>
+
+        <!-- SHELF 2: Middle (Soy Sauce, Ground Pepper, BBQ/Oyster Sauce) -->
+        <div class="flex flex-col">
+          <div class="flex items-end justify-around px-2 pb-1.5 h-24 sm:h-28">
+            <!-- 1. Soy Sauce Jugs -->
+            <div class="grocery-item flex items-end space-x-1" onclick="pickItem('soy_sauce', event)" title="Soy Sauce ($3)">
+              <svg width="30" height="52" viewBox="0 0 45 70">
+                <rect x="18" y="2" width="9" height="12" fill="#d23d24" stroke="#4c1d13" stroke-width="1.5"/>
+                <path d="M14,14 L31,14 L38,32 L38,64 L7,64 L7,32 Z" fill="#dbe6ed" stroke="#3b596d" stroke-width="2"/>
+                <rect x="10" y="32" width="25" height="26" fill="#ea8536" stroke="#873c09" stroke-width="1.5"/>
+                <path d="M14,44 Q22,38 31,44" stroke="#512204" stroke-width="2" fill="none"/>
+              </svg>
+              <svg width="30" height="52" viewBox="0 0 45 70">
+                <rect x="18" y="2" width="9" height="12" fill="#d23d24" stroke="#4c1d13" stroke-width="1.5"/>
+                <path d="M14,14 L31,14 L38,32 L38,64 L7,64 L7,32 Z" fill="#dbe6ed" stroke="#3b596d" stroke-width="2"/>
+                <rect x="10" y="32" width="25" height="26" fill="#ea8536" stroke="#873c09" stroke-width="1.5"/>
+                <path d="M14,44 Q22,38 31,44" stroke="#512204" stroke-width="2" fill="none"/>
+              </svg>
+              <svg width="30" height="52" viewBox="0 0 45 70">
+                <rect x="18" y="2" width="9" height="12" fill="#d23d24" stroke="#4c1d13" stroke-width="1.5"/>
+                <path d="M14,14 L31,14 L38,32 L38,64 L7,64 L7,32 Z" fill="#dbe6ed" stroke="#3b596d" stroke-width="2"/>
+                <rect x="10" y="32" width="25" height="26" fill="#ea8536" stroke="#873c09" stroke-width="1.5"/>
+                <path d="M14,44 Q22,38 31,44" stroke="#512204" stroke-width="2" fill="none"/>
+              </svg>
+            </div>
+
+            <!-- 2. Ground Pepper Shakers -->
+            <div class="grocery-item flex items-end space-x-1" onclick="pickItem('ground_pepper', event)" title="Ground Pepper ($2)">
+              <svg width="22" height="44" viewBox="0 0 35 60">
+                <rect x="7" y="4" width="21" height="12" rx="3" fill="#68a867" stroke="#254d24" stroke-width="2"/>
+                <rect x="5" y="16" width="25" height="40" rx="4" fill="#f8f4e6" stroke="#3d493a" stroke-width="2"/>
+                <circle cx="17.5" cy="34" r="7" fill="none" stroke="#68a867" stroke-width="2"/>
+                <circle cx="14" cy="47" r="1.5" fill="#333"/><circle cx="21" cy="49" r="1.5" fill="#333"/>
+              </svg>
+              <svg width="22" height="44" viewBox="0 0 35 60">
+                <rect x="7" y="4" width="21" height="12" rx="3" fill="#68a867" stroke="#254d24" stroke-width="2"/>
+                <rect x="5" y="16" width="25" height="40" rx="4" fill="#f8f4e6" stroke="#3d493a" stroke-width="2"/>
+                <circle cx="17.5" cy="34" r="7" fill="none" stroke="#68a867" stroke-width="2"/>
+                <circle cx="14" cy="47" r="1.5" fill="#333"/><circle cx="21" cy="49" r="1.5" fill="#333"/>
+              </svg>
+              <svg width="22" height="44" viewBox="0 0 35 60">
+                <rect x="7" y="4" width="21" height="12" rx="3" fill="#68a867" stroke="#254d24" stroke-width="2"/>
+                <rect x="5" y="16" width="25" height="40" rx="4" fill="#f8f4e6" stroke="#3d493a" stroke-width="2"/>
+                <circle cx="17.5" cy="34" r="7" fill="none" stroke="#68a867" stroke-width="2"/>
+                <circle cx="14" cy="47" r="1.5" fill="#333"/><circle cx="21" cy="49" r="1.5" fill="#333"/>
+              </svg>
+            </div>
+
+            <!-- 3. BBQ/Oyster Sauce Bottles -->
+            <div class="grocery-item flex items-end space-x-1" onclick="pickItem('bbq_sauce', event)" title="BBQ Sauce ($4)">
+              <svg width="26" height="52" viewBox="0 0 38 75">
+                <rect x="14" y="3" width="10" height="10" fill="#a43324" stroke="#481812" stroke-width="1.5"/>
+                <path d="M15,13 L23,13 L29,32 L32,68 L6,68 L9,32 Z" fill="#6c3322" stroke="#3b1c13" stroke-width="2"/>
+                <rect x="8" y="44" width="22" height="16" rx="2" fill="#ef9a45" stroke="#4d2208" stroke-width="1.5"/>
+                <text x="12" y="56" font-size="9" font-weight="bold" fill="#3a1803">BBQ</text>
+              </svg>
+              <svg width="26" height="52" viewBox="0 0 38 75">
+                <rect x="14" y="3" width="10" height="10" fill="#a43324" stroke="#481812" stroke-width="1.5"/>
+                <path d="M15,13 L23,13 L29,32 L32,68 L6,68 L9,32 Z" fill="#6c3322" stroke="#3b1c13" stroke-width="2"/>
+                <rect x="8" y="44" width="22" height="16" rx="2" fill="#ef9a45" stroke="#4d2208" stroke-width="1.5"/>
+                <text x="12" y="56" font-size="9" font-weight="bold" fill="#3a1803">BBQ</text>
+              </svg>
+              <svg width="26" height="52" viewBox="0 0 38 75">
+                <rect x="14" y="3" width="10" height="10" fill="#a43324" stroke="#481812" stroke-width="1.5"/>
+                <path d="M15,13 L23,13 L29,32 L32,68 L6,68 L9,32 Z" fill="#6c3322" stroke="#3b1c13" stroke-width="2"/>
+                <rect x="8" y="44" width="22" height="16" rx="2" fill="#ef9a45" stroke="#4d2208" stroke-width="1.5"/>
+                <text x="12" y="56" font-size="9" font-weight="bold" fill="#3a1803">BBQ</text>
+              </svg>
+            </div>
+          </div>
+          <!-- Shelf Board & Price Tags -->
+          <div class="shelf-rail w-full py-1.5 px-3 flex justify-around items-center">
+            <div class="price-tag px-4 py-0.5 text-lg cursor-pointer" onclick="pickItem('soy_sauce', event)">$ 3</div>
+            <div class="price-tag px-4 py-0.5 text-lg cursor-pointer" onclick="pickItem('ground_pepper', event)">$ 2</div>
+            <div class="price-tag px-4 py-0.5 text-lg cursor-pointer" onclick="pickItem('bbq_sauce', event)">$ 4</div>
+          </div>
+        </div>
+
+        <!-- SHELF 3: Bottom (Mayonnaise, Sriracha, Butter) -->
+        <div class="flex flex-col">
+          <div class="flex items-end justify-around px-2 pb-1.5 h-24 sm:h-28">
+            <!-- 1. Mayonnaise Squeeze Bottles -->
+            <div class="grocery-item flex items-end space-x-1" onclick="pickItem('mayo', event)" title="Mayonnaise ($2)">
+              <svg width="24" height="48" viewBox="0 0 34 65">
+                <polygon points="12,2 22,2 20,10 14,10" fill="#fbb63e" stroke="#684712" stroke-width="1.5"/>
+                <path d="M14,10 L20,10 L28,24 L28,58 L6,58 L6,24 Z" fill="#fdfbe8" stroke="#4a4228" stroke-width="2"/>
+                <rect x="9" y="32" width="16" height="18" rx="3" fill="#6398d8" stroke="#254773" stroke-width="1.5"/>
+                <circle cx="17" cy="41" r="3" fill="#fff"/>
+              </svg>
+              <svg width="24" height="48" viewBox="0 0 34 65">
+                <polygon points="12,2 22,2 20,10 14,10" fill="#fbb63e" stroke="#684712" stroke-width="1.5"/>
+                <path d="M14,10 L20,10 L28,24 L28,58 L6,58 L6,24 Z" fill="#fdfbe8" stroke="#4a4228" stroke-width="2"/>
+                <rect x="9" y="32" width="16" height="18" rx="3" fill="#6398d8" stroke="#254773" stroke-width="1.5"/>
+                <circle cx="17" cy="41" r="3" fill="#fff"/>
+              </svg>
+              <svg width="24" height="48" viewBox="0 0 34 65">
+                <polygon points="12,2 22,2 20,10 14,10" fill="#fbb63e" stroke="#684712" stroke-width="1.5"/>
+                <path d="M14,10 L20,10 L28,24 L28,58 L6,58 L6,24 Z" fill="#fdfbe8" stroke="#4a4228" stroke-width="2"/>
+                <rect x="9" y="32" width="16" height="18" rx="3" fill="#6398d8" stroke="#254773" stroke-width="1.5"/>
+                <circle cx="17" cy="41" r="3" fill="#fff"/>
+              </svg>
+            </div>
+
+            <!-- 2. Sriracha / Hot Sauce Bottles -->
+            <div class="grocery-item flex items-end space-x-1" onclick="pickItem('sriracha', event)" title="Hot Sauce ($2)">
+              <svg width="24" height="48" viewBox="0 0 34 65">
+                <polygon points="12,2 22,2 20,10 14,10" fill="#fbb63e" stroke="#684712" stroke-width="1.5"/>
+                <path d="M14,10 L20,10 L28,24 L28,58 L6,58 L6,24 Z" fill="#ea573d" stroke="#561f15" stroke-width="2"/>
+                <rect x="10" y="32" width="14" height="18" rx="3" fill="#fff" stroke="#662217" stroke-width="1.5"/>
+                <circle cx="17" cy="41" r="4" fill="#d83a21"/>
+              </svg>
+              <svg width="24" height="48" viewBox="0 0 34 65">
+                <polygon points="12,2 22,2 20,10 14,10" fill="#fbb63e" stroke="#684712" stroke-width="1.5"/>
+                <path d="M14,10 L20,10 L28,24 L28,58 L6,58 L6,24 Z" fill="#ea573d" stroke="#561f15" stroke-width="2"/>
+                <rect x="10" y="32" width="14" height="18" rx="3" fill="#fff" stroke="#662217" stroke-width="1.5"/>
+                <circle cx="17" cy="41" r="4" fill="#d83a21"/>
+              </svg>
+              <svg width="24" height="48" viewBox="0 0 34 65">
+                <polygon points="12,2 22,2 20,10 14,10" fill="#fbb63e" stroke="#684712" stroke-width="1.5"/>
+                <path d="M14,10 L20,10 L28,24 L28,58 L6,58 L6,24 Z" fill="#ea573d" stroke="#561f15" stroke-width="2"/>
+                <rect x="10" y="32" width="14" height="18" rx="3" fill="#fff" stroke="#662217" stroke-width="1.5"/>
+                <circle cx="17" cy="41" r="4" fill="#d83a21"/>
+              </svg>
+            </div>
+
+            <!-- 3. Butter Bricks -->
+            <div class="grocery-item flex items-end space-x-1" onclick="pickItem('butter', event)" title="Butter ($3)">
+              <svg width="34" height="24" viewBox="0 0 60 40">
+                <polygon points="5,15 20,5 55,5 40,15" fill="#a5cbec" stroke="#3d6283" stroke-width="1.5"/>
+                <polygon points="40,15 55,5 55,25 40,35" fill="#f4ce7d" stroke="#5c451b" stroke-width="1.5"/>
+                <rect x="5" y="15" width="35" height="20" fill="#fbe19e" stroke="#5c451b" stroke-width="2"/>
+                <circle cx="16" cy="25" r="5" fill="#fff"/>
+              </svg>
+              <svg width="34" height="24" viewBox="0 0 60 40">
+                <polygon points="5,15 20,5 55,5 40,15" fill="#a5cbec" stroke="#3d6283" stroke-width="1.5"/>
+                <polygon points="40,15 55,5 55,25 40,35" fill="#f4ce7d" stroke="#5c451b" stroke-width="1.5"/>
+                <rect x="5" y="15" width="35" height="20" fill="#fbe19e" stroke="#5c451b" stroke-width="2"/>
+                <circle cx="16" cy="25" r="5" fill="#fff"/>
+              </svg>
+              <svg width="34" height="24" viewBox="0 0 60 40">
+                <polygon points="5,15 20,5 55,5 40,15" fill="#a5cbec" stroke="#3d6283" stroke-width="1.5"/>
+                <polygon points="40,15 55,5 55,25 40,35" fill="#f4ce7d" stroke="#5c451b" stroke-width="1.5"/>
+                <rect x="5" y="15" width="35" height="20" fill="#fbe19e" stroke="#5c451b" stroke-width="2"/>
+                <circle cx="16" cy="25" r="5" fill="#fff"/>
+              </svg>
+            </div>
+          </div>
+          <!-- Shelf Board & Price Tags -->
+          <div class="shelf-rail w-full py-1.5 px-3 flex justify-around items-center">
+            <div class="price-tag px-4 py-0.5 text-lg cursor-pointer" onclick="pickItem('mayo', event)">$ 2</div>
+            <div class="price-tag px-4 py-0.5 text-lg cursor-pointer" onclick="pickItem('sriracha', event)">$ 2</div>
+            <div class="price-tag px-4 py-0.5 text-lg cursor-pointer" onclick="pickItem('butter', event)">$ 3</div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- BOTTOM INTERACTIVE AREA: CUSTOMER NOTE + BASKET -->
+      <div class="mt-4 pt-2 border-t-4 border-[#deb39e] flex items-end justify-between relative px-2 sm:px-4">
+        
+        <!-- Customer Shopping Note (Left) -->
+        <div class="relative w-44 sm:w-52">
+          <!-- Back layer note shadow -->
+          <div class="absolute -top-1 -left-1 w-full h-full bg-[#e8deca] rounded-xl border-2 border-[#6d513e] rotate-[-2deg]"></div>
+          
+          <!-- Front Note -->
+          <div class="relative bg-[#fffdf9] p-2.5 sm:p-3 rounded-xl border-2 border-[#543b2a] shadow-md rotate-[1deg]">
+            <div class="w-12 h-2.5 bg-amber-200/70 rounded-full mx-auto mb-1"></div>
+            <div class="text-xs font-bold text-amber-900 mb-1 border-b pb-1 flex justify-between items-center">
+              <span>Customer Note</span>
+              <span id="order-progress-tag" class="text-[10px] bg-amber-100 px-1.5 py-0.5 rounded-md text-amber-800">0/0</span>
+            </div>
+
+            <!-- Dynamic Customer Item List -->
+            <div id="customer-order-list" class="space-y-1.5 my-1 text-xs sm:text-sm font-semibold">
+              <!-- Rendered via JS -->
+            </div>
+
+            <!-- Cute Hamster Mascot doodle -->
+            <div class="mt-2 flex items-center justify-between pt-1 border-t border-amber-100">
+              <div class="text-[10px] text-amber-700 handwritten leading-tight">
+                "Please get these condiments for me!"
+              </div>
+              <svg width="34" height="28" viewBox="0 0 50 45" class="shrink-0 ml-1">
+                <ellipse cx="25" cy="26" rx="19" ry="16" fill="#f6cca9" stroke="#5a3d28" stroke-width="2"/>
+                <ellipse cx="25" cy="30" rx="13" ry="11" fill="#fff3e6"/>
+                <!-- ears -->
+                <circle cx="12" cy="12" r="6" fill="#f6cca9" stroke="#5a3d28" stroke-width="2"/>
+                <circle cx="12" cy="12" r="3" fill="#f19da5"/>
+                <circle cx="38" cy="12" r="6" fill="#f6cca9" stroke="#5a3d28" stroke-width="2"/>
+                <circle cx="38" cy="12" r="3" fill="#f19da5"/>
+                <!-- eyes -->
+                <circle cx="18" cy="24" r="2.5" fill="#2d1c10"/>
+                <circle cx="32" cy="24" r="2.5" fill="#2d1c10"/>
+                <!-- rosy cheeks -->
+                <circle cx="14" cy="28" r="3" fill="#ffb4b4" opacity="0.6"/>
+                <circle cx="36" cy="28" r="3" fill="#ffb4b4" opacity="0.6"/>
+                <!-- mouth / seeds -->
+                <polygon points="23,28 27,28 25,31" fill="#d26053"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <!-- Green Shopping Basket (Right) -->
+        <div class="flex flex-col items-center">
+          <div id="shopping-basket" class="relative cursor-pointer transition-transform duration-200 hover:scale-105 active:scale-95" onclick="promptCheckoutIfReady()">
+            
+            <!-- Basket SVG inspired directly by the reference image -->
+            <svg width="150" height="110" viewBox="0 0 200 150" class="filter drop-shadow-md">
+              <!-- Basket handle -->
+              <path d="M70,35 C70,12 130,12 130,35" fill="none" stroke="#4da874" stroke-width="8" stroke-linecap="round"/>
+              <rect x="85" y="10" width="30" height="12" rx="4" fill="#357853"/>
+              <!-- Basket Rim -->
+              <rect x="25" y="32" width="150" height="18" rx="6" fill="#58ba82" stroke="#2c6d48" stroke-width="3"/>
+              <!-- Basket Body -->
+              <polygon points="32,48 168,48 155,135 45,135" fill="#50ad79" stroke="#2c6d48" stroke-width="3"/>
+              <!-- Slits/Texture -->
+              <g fill="#378b5a">
+                <rect x="52" y="58" width="8" height="65" rx="3"/>
+                <rect x="68" y="58" width="8" height="65" rx="3"/>
+                <rect x="84" y="58" width="8" height="65" rx="3"/>
+                <rect x="100" y="58" width="8" height="65" rx="3"/>
+                <rect x="116" y="58" width="8" height="65" rx="3"/>
+                <rect x="132" y="58" width="8" height="65" rx="3"/>
+              </g>
+              <!-- Center Cute Bear / Frog Face Emboss -->
+              <g transform="translate(85, 78)">
+                <ellipse cx="15" cy="12" rx="14" ry="10" fill="#69c592" stroke="#348054" stroke-width="2"/>
+                <circle cx="8" cy="4" r="3" fill="#69c592" stroke="#348054" stroke-width="2"/>
+                <circle cx="22" cy="4" r="3" fill="#69c592" stroke="#348054" stroke-width="2"/>
+                <circle cx="11" cy="11" r="1.5" fill="#235a39"/>
+                <circle cx="19" cy="11" r="1.5" fill="#235a39"/>
+                <path d="M12,15 Q15,18 18,15" stroke="#235a39" stroke-width="1.5" fill="none"/>
+              </g>
+            </svg>
+
+            <!-- Basket Count Badge -->
+            <div id="basket-badge" class="absolute -top-2 -right-1 bg-rose-500 text-white font-bold rounded-full w-8 h-8 flex items-center justify-center text-sm shadow-md border-2 border-white scale-100 transition-transform">
+              0
+            </div>
+          </div>
+
+          <!-- Checkout Button Trigger -->
+          <button id="checkout-trigger-btn" onclick="goToCashier()" class="mt-2 w-full bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-xs sm:text-sm font-bold py-1.5 px-3 rounded-xl shadow-md border-2 border-emerald-800 transition-all flex items-center justify-center space-x-1">
+            <span>🛒 Go to Cashier</span>
+          </button>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- ========================================== -->
+    <!-- VIEW 2: CASHIER CHECKOUT REGISTER          -->
+    <!-- ========================================== -->
+    <div id="cashier-view" class="hidden flex-1 flex flex-col p-3 sm:p-4 bg-[#f8f3e8] transition-all duration-300">
+      
+      <!-- Top Header & Back to Shelves button -->
+      <div class="flex items-center justify-between pb-2 border-b-2 border-amber-200">
+        <button onclick="goToShelf()" class="bg-amber-200 hover:bg-amber-300 text-amber-900 text-xs sm:text-sm font-bold px-3 py-1.5 rounded-xl border border-amber-400 flex items-center space-x-1">
+          <span>⬅ Back to Shelves</span>
+        </button>
+        <span class="font-bold text-amber-900 text-sm sm:text-base">Checkout Counter 🧾</span>
+        <div class="text-xs bg-emerald-100 text-emerald-800 font-bold px-2.5 py-1 rounded-lg border border-emerald-300">
+          Target: $<span id="checkout-total-bill">0.00</span>
+        </div>
+      </div>
+
+      <!-- Main Counter Layout (Split: Left Conveyor/Scanner, Right Register POS) -->
+      <div class="flex-1 grid grid-cols-1 md:grid-cols-12 gap-3 my-2">
+        
+        <!-- LEFT: Items from Basket ready to be scanned (5 cols) -->
+        <div class="md:col-span-5 bg-[#ede4d3] p-3 rounded-2xl border-2 border-[#bfa993] flex flex-col">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-amber-900">Items to Scan</h3>
+            <span id="items-to-scan-count" class="text-xs bg-amber-200 px-2 py-0.5 rounded-full font-bold text-amber-800">0 left</span>
+          </div>
+
+          <!-- Scanner Pad -->
+          <div id="scanner-pad" class="relative bg-neutral-900 h-28 rounded-xl border-4 border-neutral-700 flex flex-col items-center justify-center p-2 text-center overflow-hidden mb-2 shadow-inner">
+            <div id="laser-line" class="absolute w-full h-1 bg-red-500 shadow-[0_0_8px_#ff0000] top-1/2 -translate-y-1/2 opacity-75"></div>
+            <div id="scanner-status" class="z-10 text-white font-mono text-xs flex flex-col items-center space-y-1">
+              <span class="text-lg">📷</span>
+              <span>Tap an item below to scan!</span>
+            </div>
+          </div>
+
+          <!-- Unscanned Items Tray -->
+          <div id="unscanned-tray" class="flex-1 overflow-y-auto max-h-44 space-y-1.5 p-1 bg-amber-50/70 rounded-xl border border-amber-300/80">
+            <!-- Dynamic list of items waiting to scan -->
+          </div>
+        </div>
+
+        <!-- RIGHT: Digital POS Register & Receipt Screen (7 cols) -->
+        <div class="md:col-span-7 bg-[#fdfaf5] p-3 rounded-2xl border-2 border-[#b59d88] flex flex-col justify-between shadow-sm">
+          
+          <!-- POS Screen (Itemized List) -->
+          <div class="bg-[#1f2937] text-emerald-400 p-2.5 rounded-xl font-mono text-xs sm:text-sm border-2 border-neutral-800 shadow-inner flex flex-col h-40">
+            <div class="flex justify-between border-b border-emerald-800/80 pb-1 mb-1 text-[11px] text-emerald-300">
+              <span>ITEM</span>
+              <span>QTY x PRICE</span>
+              <span>TOTAL</span>
+            </div>
+            
+            <div id="receipt-items-list" class="flex-1 overflow-y-auto space-y-1 pr-1 font-mono text-xs">
+              <!-- Itemized receipts pop in here -->
+              <p class="text-gray-500 italic text-center pt-8">Scan items to print receipt...</p>
+            </div>
+
+            <div class="border-t border-emerald-700/70 pt-1 mt-1 flex justify-between font-bold text-sm">
+              <span>SUBTOTAL DUE:</span>
+              <span>$<span id="pos-total-display">0.00</span></span>
+            </div>
+          </div>
+
+          <!-- Customer Cash Tender Section -->
+          <div id="payment-stage" class="mt-2 bg-amber-100/70 p-2.5 rounded-xl border border-amber-300 text-xs">
+            <div class="flex justify-between items-center mb-1">
+              <span class="font-bold text-amber-900">Customer Gives:</span>
+              <span class="text-sm font-black text-emerald-800 bg-emerald-200/90 px-2 py-0.5 rounded border border-emerald-400">
+                $<span id="customer-cash-given">0.00</span>
+              </span>
+            </div>
+            <div class="flex justify-between items-center text-[11px] text-amber-800">
+              <span>Change Needed:</span>
+              <span class="font-bold text-rose-700">$<span id="change-needed-display">0.00</span></span>
+            </div>
+            <div class="flex justify-between items-center text-[11px] text-amber-800 mt-0.5">
+              <span>Change Tendered so far:</span>
+              <span class="font-bold text-blue-700">$<span id="change-given-display">0.00</span></span>
+            </div>
+          </div>
+
+          <!-- Cash Drawer (Coins & Bills to return change) -->
+          <div class="mt-2">
+            <div class="text-[11px] font-bold text-amber-800 mb-1 flex items-center justify-between">
+              <span>Give Change (Tap money):</span>
+              <button onclick="clearGivenChange()" class="text-[10px] text-amber-600 underline hover:text-amber-800">Reset Change</button>
+            </div>
+            
+            <div class="grid grid-cols-4 gap-1.5">
+              <!-- $1 Coin -->
+              <button onclick="addChange(1.00)" class="register-btn bg-amber-100 border border-amber-400 rounded-lg p-1.5 text-center text-xs font-bold text-amber-900 flex flex-col items-center">
+                <span class="w-5 h-5 rounded-full bg-yellow-400 border border-yellow-600 flex items-center justify-center text-[10px]">🪙</span>
+                <span>+$1</span>
+              </button>
+              <!-- $2 Bill -->
+              <button onclick="addChange(2.00)" class="register-btn bg-emerald-100 border border-emerald-400 rounded-lg p-1.5 text-center text-xs font-bold text-emerald-900 flex flex-col items-center">
+                <span class="text-[10px]">💵</span>
+                <span>+$2</span>
+              </button>
+              <!-- $5 Bill -->
+              <button onclick="addChange(5.00)" class="register-btn bg-blue-100 border border-blue-400 rounded-lg p-1.5 text-center text-xs font-bold text-blue-900 flex flex-col items-center">
+                <span class="text-[10px]">💵</span>
+                <span>+$5</span>
+              </button>
+              <!-- $10 Bill -->
+              <button onclick="addChange(10.00)" class="register-btn bg-purple-100 border border-purple-400 rounded-lg p-1.5 text-center text-xs font-bold text-purple-900 flex flex-col items-center">
+                <span class="text-[10px]">💵</span>
+                <span>+$10</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Finish Order Button -->
+          <button id="complete-sale-btn" onclick="finishTransaction()" class="mt-2.5 w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 rounded-xl border-2 border-emerald-900 shadow-md text-sm transition-transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
+            Complete Sale & Hand Receipt ✨
+          </button>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- Celebration/Message Modal Overlay -->
+    <div id="feedback-modal" class="hidden absolute inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+      <div class="bg-[#fffbf2] border-4 border-[#7a5944] rounded-3xl p-5 w-full max-w-sm text-center shadow-2xl transform scale-100 animate-in">
+        <div id="modal-icon" class="text-5xl mb-2">⭐</div>
+        <h3 id="modal-title" class="text-xl font-bold text-amber-950 mb-1">Customer Delighted!</h3>
+        <p id="modal-desc" class="text-sm text-amber-800 mb-4 font-medium">You got all the condiments right and calculated exact change! +$2 Tip!</p>
+        
+        <div id="modal-rewards" class="bg-amber-100 rounded-xl p-2.5 mb-4 text-xs font-bold text-amber-900 flex justify-around">
+          <div>Earned: <span class="text-emerald-700" id="modal-earned">+$14.00</span></div>
+          <div>Rating: <span class="text-amber-600">⭐⭐⭐⭐⭐</span></div>
+        </div>
+
+        <button onclick="startNextCustomer()" class="w-full bg-[#f6aa42] hover:bg-[#e69830] text-white font-bold py-2.5 px-4 rounded-xl border-2 border-[#824c13] shadow-md transition-all active:scale-95">
+          Next Customer 🐾
+        </button>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Footer Tip -->
+  <footer class="mt-2 text-center text-xs text-amber-900/60 font-medium">
+    Click shelf items to add to the green basket • Bring them to the Cashier to checkout!
+  </footer>
+
+  <!-- ======================================================== -->
+  <!-- JAVASCRIPT GAME LOGIC & SOUND SYNTHESIS                  -->
+  <!-- ======================================================== -->
+  <script>
+    /* ---------------------------------------------------- */
+    /* 1. MASTER ITEM DEFINITIONS & DATABASE                */
+    /* ---------------------------------------------------- */
+    const GROCERY_ITEMS = {
+      chili_paste:   { name: "Chili Paste", price: 6, emoji: "🥫", shelfRow: 1 },
+      spices_pack:   { name: "Spices Pack", price: 8, emoji: "🌶️", shelfRow: 1 },
+      sugar:         { name: "Sugar",       price: 2, emoji: "🍚", shelfRow: 1 },
+      soy_sauce:     { name: "Soy Sauce",   price: 3, emoji: "🍶", shelfRow: 2 },
+      ground_pepper: { name: "Pepper",      price: 2, emoji: "🧂", shelfRow: 2 },
+      bbq_sauce:     { name: "BBQ Sauce",   price: 4, emoji: "🥩", shelfRow: 2 },
+      mayo:          { name: "Mayonnaise",  price: 2, emoji: "🥪", shelfRow: 3 },
+      sriracha:      { name: "Hot Sauce",   price: 2, emoji: "🔥", shelfRow: 3 },
+      butter:        { name: "Butter",      price: 3, emoji: "🧈", shelfRow: 3 }
+    };
+
+    /* ---------------------------------------------------- */
+    /* 2. AUDIO SYNTHESIZER (Web Audio API - No external files) */
+    /* ---------------------------------------------------- */
+    let audioCtx = null;
+    let isSoundOn = true;
+
+    function initAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+    }
+
+    function playTone(freq, type, duration, delay = 0, vol = 0.15) {
+      if (!isSoundOn) return;
+      initAudio();
+      try {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime + delay);
+        
+        gain.gain.setValueAtTime(vol, audioCtx.currentTime + delay);
+        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + delay + duration);
+        
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        
+        osc.start(audioCtx.currentTime + delay);
+        osc.stop(audioCtx.currentTime + delay + duration);
+      } catch (e) {
+        // audio might be blocked before interaction
+      }
+    }
+
+    function soundPop() {
+      playTone(450, 'sine', 0.08, 0, 0.2);
+      playTone(720, 'sine', 0.12, 0.04, 0.25);
+    }
+
+    function soundBeepScan() {
+      playTone(1800, 'square', 0.1, 0, 0.12);
+    }
+
+    function soundCoin() {
+      playTone(987.77, 'sine', 0.08, 0, 0.2);
+      playTone(1318.51, 'sine', 0.22, 0.07, 0.25);
+    }
+
+    function soundFanfare() {
+      const notes = [523.25, 659.25, 783.99, 1046.50];
+      notes.forEach((freq, idx) => {
+        playTone(freq, 'triangle', 0.25, idx * 0.1, 0.2);
+      });
+    }
+
+    function soundError() {
+      playTone(220, 'sawtooth', 0.15, 0, 0.15);
+      playTone(180, 'sawtooth', 0.2, 0.1, 0.15);
+    }
+
+    // Toggle sound
+    document.getElementById('sound-btn').addEventListener('click', () => {
+      isSoundOn = !isSoundOn;
+      document.getElementById('sound-icon').innerText = isSoundOn ? '🔊' : '🔇';
+      if (isSoundOn) soundPop();
+    });
+
+    /* ---------------------------------------------------- */
+    /* 3. GAME STATE                                        */
+    /* ---------------------------------------------------- */
+    let day = 1;
+    let customerNum = 1;
+    let totalCashEarned = 0.00;
+    
+    // Current customer request: { itemKey: quantityNeeded }
+    let currentOrder = {};
+    
+    // Player's collected items in the basket: Array of item keys
+    let basketItems = [];
+    
+    // Cashier Register State:
+    let scannedItems = []; // items scanned at POS
+    let unscannedItems = []; // items still on cashier conveyor
+    let customerPaidCash = 0;
+    let changeGivenSoFar = 0.00;
+
+    /* ---------------------------------------------------- */
+    /* 4. GAME INITIALIZATION & ORDER GENERATION            */
+    /* ---------------------------------------------------- */
+    function startNextCustomer() {
+      document.getElementById('feedback-modal').classList.add('hidden');
+      goToShelf();
+
+      // Pick 2 to 3 distinct items randomly
+      const itemKeys = Object.keys(GROCERY_ITEMS);
+      // Shuffle keys
+      const shuffled = [...itemKeys].sort(() => 0.5 - Math.random());
+      const selectedCount = Math.floor(Math.random() * 2) + 2; // 2 or 3 items
+      const selectedKeys = shuffled.slice(0, selectedCount);
+
+      currentOrder = {};
+      selectedKeys.forEach(k => {
+        // Quantity 1 or 2
+        currentOrder[k] = Math.random() > 0.65 ? 2 : 1;
+      });
+
+      basketItems = [];
+      updateOrderNoteUI();
+      updateBasketUI();
+      document.getElementById('customer-counter').innerText = customerNum;
+      document.getElementById('day-counter').innerText = day;
+    }
+
+    /* Render the cute sticky note with customer's requests */
+    function updateOrderNoteUI() {
+      const listEl = document.getElementById('customer-order-list');
+      listEl.innerHTML = '';
+
+      let totalItemsNeeded = 0;
+      let totalItemsCollected = 0;
+
+      Object.entries(currentOrder).forEach(([key, neededQty]) => {
+        totalItemsNeeded += neededQty;
+        // Count how many we currently have in basket
+        const inBasket = basketItems.filter(k => k === key).length;
+        if (inBasket >= neededQty) totalItemsCollected += neededQty;
+        else totalItemsCollected += inBasket;
+
+        const isComplete = inBasket >= neededQty;
+        const itemInfo = GROCERY_ITEMS[key];
+
+        const row = document.createElement('div');
+        row.className = `flex items-center justify-between py-0.5 border-b border-amber-100 ${isComplete ? 'text-amber-400 line-through' : 'text-amber-900'}`;
+        row.innerHTML = `
+          <div class="flex items-center space-x-1.5">
+            <span class="text-base">${itemInfo.emoji}</span>
+            <span class="font-bold">${itemInfo.name}</span>
+          </div>
+          <div class="flex items-center space-x-1">
+            <span class="text-xs bg-amber-50 px-1.5 py-0.5 rounded font-mono font-bold">${inBasket}/${neededQty}</span>
+            <span class="text-xs">${isComplete ? '✅' : '⬜'}</span>
+          </div>
+        `;
+        listEl.appendChild(row);
+      });
+
+      document.getElementById('order-progress-tag').innerText = `${totalItemsCollected}/${totalItemsNeeded}`;
+    }
+
+    /* ---------------------------------------------------- */
+    /* 5. ITEM PICKING & BASKET INTERACTION                 */
+    /* ---------------------------------------------------- */
+    function pickItem(itemKey, event) {
+      soundPop();
+      basketItems.push(itemKey);
+      
+      // Floating score effect at click location
+      showFloatingText(event.clientX, event.clientY, `+1 ${GROCERY_ITEMS[itemKey].name}`);
+
+      // Animate basket
+      const basket = document.getElementById('shopping-basket');
+      basket.classList.remove('basket-bounce');
+      void basket.offsetWidth; // trigger reflow
+      basket.classList.add('basket-bounce');
+
+      updateBasketUI();
+      updateOrderNoteUI();
+    }
+
+    function updateBasketUI() {
+      const badge = document.getElementById('basket-badge');
+      badge.innerText = basketItems.length;
+      badge.classList.add('scale-125');
+      setTimeout(() => badge.classList.remove('scale-125'), 150);
+    }
+
+    function showFloatingText(x, y, text) {
+      const el = document.createElement('div');
+      el.className = 'fixed font-bold text-xs sm:text-sm text-emerald-800 bg-emerald-100 px-2 py-1 rounded-full border border-emerald-400 shadow floating-text z-50 pointer-events-none';
+      el.style.left = `${x - 25}px`;
+      el.style.top = `${y - 25}px`;
+      el.innerText = text;
+      document.body.appendChild(el);
+      setTimeout(() => el.remove(), 850);
+    }
+
+    function promptCheckoutIfReady() {
+      if (basketItems.length === 0) {
+        soundError();
+        return;
+      }
+      goToCashier();
+    }
+
+    /* ---------------------------------------------------- */
+    /* 6. SWITCHING VIEWS (SHELVES <-> CASHIER)             */
+    /* ---------------------------------------------------- */
+    function goToShelf() {
+      document.getElementById('cashier-view').classList.add('hidden');
+      document.getElementById('shelf-view').classList.remove('hidden');
+    }
+
+    function goToCashier() {
+      if (basketItems.length === 0) {
+        soundError();
+        alertBox("The basket is empty! Tap condiments on the shelf to put them into your basket first. 🥫");
+        return;
+      }
+      document.getElementById('shelf-view').classList.add('hidden');
+      document.getElementById('cashier-view').classList.remove('hidden');
+      initCashierCounter();
+    }
+
+    function alertBox(msg) {
+      // Gentle notification toast
+      const toast = document.createElement('div');
+      toast.className = 'fixed top-14 left-1/2 -translate-x-1/2 bg-amber-900 text-amber-50 px-4 py-2 rounded-xl text-xs sm:text-sm shadow-xl z-50 animate-bounce border border-amber-700';
+      toast.innerText = msg;
+      document.body.appendChild(toast);
+      setTimeout(() => toast.remove(), 2500);
+    }
+
+    /* ---------------------------------------------------- */
+    /* 7. CASHIER COUNTER & SCANNING SYSTEM                 */
+    /* ---------------------------------------------------- */
+    function initCashierCounter() {
+      // Unscanned items are clones of the basket items
+      unscannedItems = [...basketItems];
+      scannedItems = [];
+      changeGivenSoFar = 0.00;
+
+      // Calculate total bill for target order
+      const totalDue = unscannedItems.reduce((sum, key) => sum + GROCERY_ITEMS[key].price, 0);
+      document.getElementById('checkout-total-bill').innerText = totalDue.toFixed(2);
+
+      // Random customer cash payment (always slightly higher than bill, e.g. $10, $20, $50)
+      const possibleBills = [5, 10, 15, 20, 30, 40, 50];
+      customerPaidCash = possibleBills.find(b => b >= totalDue) || (Math.ceil(totalDue / 5) * 5 + 5);
+      
+      document.getElementById('customer-cash-given').innerText = customerPaidCash.toFixed(2);
+      
+      updateCashierUI();
+    }
+
+    function updateCashierUI() {
+      // 1. Render Unscanned Tray
+      const tray = document.getElementById('unscanned-tray');
+      tray.innerHTML = '';
+      document.getElementById('items-to-scan-count').innerText = `${unscannedItems.length} left`;
+
+      unscannedItems.forEach((itemKey, index) => {
+        const item = GROCERY_ITEMS[itemKey];
+        const btn = document.createElement('div');
+        btn.className = 'flex items-center justify-between p-2 bg-white rounded-lg border border-amber-300 shadow-sm cursor-pointer hover:bg-emerald-50 active:scale-95 transition-all';
+        btn.innerHTML = `
+          <div class="flex items-center space-x-2">
+            <span class="text-xl">${item.emoji}</span>
+            <span class="text-xs font-bold text-amber-900">${item.name}</span>
+          </div>
+          <span class="text-xs font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded">Scan 👉</span>
+        `;
+        btn.onclick = () => scanItem(index);
+        tray.appendChild(btn);
+      });
+
+      if (unscannedItems.length === 0) {
+        tray.innerHTML = '<div class="text-center text-xs text-amber-700 py-4 font-semibold">✨ All items scanned! Now tender the change.</div>';
+      }
+
+      // 2. Render POS Receipt
+      const receiptList = document.getElementById('receipt-items-list');
+      if (scannedItems.length === 0) {
+        receiptList.innerHTML = '<p class="text-gray-500 italic text-center pt-8">Scan items to print receipt...</p>';
+      } else {
+        receiptList.innerHTML = '';
+        let runningTotal = 0;
+        
+        scannedItems.forEach(itemKey => {
+          const item = GROCERY_ITEMS[itemKey];
+          runningTotal += item.price;
+          const line = document.createElement('div');
+          line.className = 'flex justify-between items-center py-0.5 border-b border-gray-800';
+          line.innerHTML = `
+            <span>${item.name}</span>
+            <span class="text-gray-400">1 x $${item.price}</span>
+            <span>$${item.price.toFixed(2)}</span>
+          `;
+          receiptList.appendChild(line);
+        });
+
+        document.getElementById('pos-total-display').innerText = runningTotal.toFixed(2);
+      }
+
+      // 3. Update Change Numbers
+      const totalDue = scannedItems.reduce((sum, key) => sum + GROCERY_ITEMS[key].price, 0);
+      const neededChange = Math.max(0, customerPaidCash - totalDue);
+      
+      document.getElementById('change-needed-display').innerText = neededChange.toFixed(2);
+      document.getElementById('change-given-display').innerText = changeGivenSoFar.toFixed(2);
+    }
+
+    function scanItem(index) {
+      soundBeepScan();
+
+      // Trigger barcode scanner animation
+      const pad = document.getElementById('scanner-pad');
+      pad.classList.remove('scanner-flash');
+      void pad.offsetWidth;
+      pad.classList.add('scanner-flash');
+
+      // Move item from unscanned to scanned
+      const itemKey = unscannedItems.splice(index, 1)[0];
+      scannedItems.push(itemKey);
+
+      updateCashierUI();
+    }
+
+    /* ---------------------------------------------------- */
+    /* 8. CASH REGISTER & CHANGE MECHANIC                   */
+    /* ---------------------------------------------------- */
+    function addChange(amount) {
+      soundCoin();
+      changeGivenSoFar = Math.round((changeGivenSoFar + amount) * 100) / 100;
+      updateCashierUI();
+    }
+
+    function clearGivenChange() {
+      soundPop();
+      changeGivenSoFar = 0.00;
+      updateCashierUI();
+    }
+
+    /* ---------------------------------------------------- */
+    /* 9. TRANSACTION COMPLETION & VERIFICATION             */
+    /* ---------------------------------------------------- */
+    function finishTransaction() {
+      // 1. Check if all items in basket were scanned
+      if (unscannedItems.length > 0) {
+        soundError();
+        alertBox("You still have items left to scan on the counter!");
+        return;
+      }
+
+      // 2. Check correctness of items against Customer's Order Note
+      // Count customer order needs
+      let isBasketCorrect = true;
+      let missingItems = [];
+
+      Object.entries(currentOrder).forEach(([key, qtyNeeded]) => {
+        const countInScanned = scannedItems.filter(k => k === key).length;
+        if (countInScanned !== qtyNeeded) {
+          isBasketCorrect = false;
+          missingItems.push(GROCERY_ITEMS[key].name);
+        }
+      });
+
+      // Also check if extra unnecessary items were scanned
+      const totalOrderQty = Object.values(currentOrder).reduce((a, b) => a + b, 0);
+      if (scannedItems.length !== totalOrderQty) {
+        isBasketCorrect = false;
+      }
+
+      // 3. Check Change Accuracy
+      const totalDue = scannedItems.reduce((sum, key) => sum + GROCERY_ITEMS[key].price, 0);
+      const exactChangeNeeded = Math.round((customerPaidCash - totalDue) * 100) / 100;
+      const isChangeCorrect = Math.abs(changeGivenSoFar - exactChangeNeeded) < 0.01;
+
+      // Outcome Evaluation
+      if (!isChangeCorrect) {
+        soundError();
+        alertBox(`Change given ($${changeGivenSoFar.toFixed(2)}) doesn't match the required change ($${exactChangeNeeded.toFixed(2)}). Adjust your coins!`);
+        return;
+      }
+
+      // Successful sale!
+      soundFanfare();
+
+      let tip = 0;
+      let title = "Customer Delighted!";
+      let desc = "";
+
+      if (isBasketCorrect) {
+        tip = 2.00;
+        title = "Perfect Order! ⭐⭐⭐";
+        desc = `You got all the exact condiments requested and calculated exact change! The customer gave you a $${tip.toFixed(2)} tip!`;
+      } else {
+        tip = 0.00;
+        title = "Sale Completed!";
+        desc = `The items didn't match the customer's note exactly, but they accepted it anyway! Exact change was returned.`;
+      }
+
+      const totalEarned = totalDue + tip;
+      totalCashEarned += totalEarned;
+      document.getElementById('money-display').innerText = totalCashEarned.toFixed(2);
+
+      // Increment customer / day counters
+      customerNum++;
+      if (customerNum % 4 === 0) {
+        day++;
+      }
+
+      // Open Success Modal
+      document.getElementById('modal-title').innerText = title;
+      document.getElementById('modal-desc').innerText = desc;
+      document.getElementById('modal-earned').innerText = `+$${totalEarned.toFixed(2)}`;
+      document.getElementById('feedback-modal').classList.remove('hidden');
+    }
+
+    /* ---------------------------------------------------- */
+    /* 10. START GAME ON LOAD                               */
+    /* ---------------------------------------------------- */
+    window.onload = function() {
+      startNextCustomer();
+    };
+  </script>
+</body>
+</html>

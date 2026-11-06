@@ -1,0 +1,1447 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>BURGUR: SURF ESCAPE - Disediakan oleh Ana_coder</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Three.js CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700;800&family=Russo+One&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Titan+One&display=swap');
+    * {
+      font-family: 'Fredoka', sans-serif;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+    }
+    .font-subway {
+      font-family: 'Titan One', 'Russo One', cursive, sans-serif;
+      text-shadow: 2px 2px 0px #000, -1px -1px 0px #000, 1px -1px 0px #000, -1px 1px 0px #000, 0px 3px 6px rgba(0,0,0,0.6);
+    }
+    .font-russo { font-family: 'Russo One', sans-serif; }
+    .font-mono-tech { font-family: 'Share Tech Mono', monospace; }
+
+    /* Animated mask glow */
+    @keyframes maskGlow {
+      0%, 100% { filter: drop-shadow(0 0 8px rgba(244,63,94,0.9)) drop-shadow(0 0 16px rgba(251,191,36,0.8)); transform: scale(1); }
+      50% { filter: drop-shadow(0 0 14px rgba(244,63,94,1)) drop-shadow(0 0 24px rgba(251,191,36,1)); transform: scale(1.06); }
+    }
+    .mask-pulse {
+      animation: maskGlow 1.8s infinite ease-in-out;
+    }
+
+    /* Speed streak lines */
+    .speed-lines {
+      background: radial-gradient(circle, transparent 65%, rgba(255, 255, 255, 0.25) 95%);
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body class="w-screen h-screen bg-slate-950 flex flex-col items-center justify-center p-0 md:p-2 overflow-hidden text-white select-none">
+
+  <!-- Main Game Frame: Exact Subway Surfers Mobile Aspect Ratio -->
+  <div class="relative w-full max-w-[440px] h-full max-h-[880px] md:rounded-3xl overflow-hidden shadow-2xl border-4 border-amber-500/80 bg-slate-900 flex flex-col justify-between">
+    
+    <!-- Three.js 3D WebGL Canvas Layer -->
+    <div id="canvasContainer" class="absolute inset-0 w-full h-full z-0 cursor-grab active:cursor-grabbing"></div>
+
+    <!-- Speed Wind Overlay FX (Activates as speed escalates) -->
+    <div id="speedOverlay" class="absolute inset-0 speed-lines opacity-0 transition-opacity duration-500 z-10 pointer-events-none"></div>
+
+    <!-- TOP SUBWAY SURFERS AUTHENTIC HUD (Matching Reference Image) -->
+    <div id="gameHUD" class="relative z-20 p-2 sm:p-3 flex flex-col gap-1 pointer-events-none">
+      
+      <!-- Top Row: Pause Button | Carnival Mask Event Counter | Multiplier | High-Contrast Score -->
+      <div class="flex items-center justify-between">
+        
+        <!-- Left: Cyan Rounded Pause Button (||) + Brand Pill -->
+        <div class="flex items-center gap-1.5 pointer-events-auto">
+          <button id="btnPause" class="w-10 h-10 bg-gradient-to-b from-cyan-400 to-cyan-600 active:scale-95 border-2 border-white rounded-xl shadow-lg flex items-center justify-center text-white font-black text-lg transition">
+            ❚❚
+          </button>
+
+          <!-- Carnival Mask Event Counter (e.g. 6/20) with Venetian Mask Icon -->
+          <div class="flex items-center gap-1 bg-black/50 backdrop-blur-md px-2.5 py-1 rounded-2xl border border-pink-400/60 shadow">
+            <span class="text-xl mask-pulse leading-none">🎭</span>
+            <span id="hudMasks" class="font-subway text-white text-base tracking-wider">0/20</span>
+          </div>
+        </div>
+
+        <!-- Right: Multiplier (x6) + Running Score Digit Counter -->
+        <div class="flex items-center gap-2">
+          <!-- Multiplier in bold yellow font (x6) -->
+          <div class="flex items-center">
+            <span id="hudMultiplier" class="font-subway text-amber-300 text-xl tracking-tight drop-shadow">x6</span>
+          </div>
+
+          <!-- Running Score in crisp high-contrast bold digits -->
+          <div class="text-right">
+            <div id="hudScore" class="font-subway text-2xl sm:text-3xl text-white tracking-widest leading-none">
+              000000
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Second Row: Creator Stamp + Coins Counter -->
+      <div class="flex items-center justify-between px-1 mt-0.5">
+        <!-- Creator & Game Tag -->
+        <div class="flex items-center gap-1 bg-black/40 backdrop-blur px-2 py-0.5 rounded-full border border-amber-400/40">
+          <span class="text-[10px] font-bold text-amber-300">BURGUR: SURF</span>
+          <span class="text-[9px] text-slate-300 font-semibold">• Ana_coder</span>
+        </div>
+
+        <!-- Golden Coins Counter (Gold Coin Icon + Count) -->
+        <div class="flex items-center gap-1.5 bg-black/50 backdrop-blur-md px-2.5 py-1 rounded-full border border-yellow-400/60 shadow">
+          <span id="hudCoins" class="font-subway text-white text-lg tracking-wider">0</span>
+          <!-- Realistic Glowing Gold Coin with Star -->
+          <div class="w-6 h-6 rounded-full bg-gradient-to-tr from-amber-500 via-yellow-300 to-amber-600 border-2 border-yellow-200 flex items-center justify-center shadow-md">
+            <span class="text-[10px] text-amber-950 font-black">★</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- FLOATING HIGH SCORE POLAROID WIDGET (Exact Right-Side Placement from reference) -->
+      <div class="absolute right-2 top-24 pointer-events-auto flex flex-col items-center">
+        <!-- Yellow Header Label -->
+        <div class="bg-amber-400 text-slate-950 font-subway text-[9px] px-2 py-0.5 rounded-t-md tracking-wider shadow">
+          HIGH SCORE
+        </div>
+        <!-- Polaroid Card with Blue Silhouette Avatar -->
+        <div class="bg-white p-1 rounded-b-md shadow-xl border border-slate-300 flex flex-col items-center w-16">
+          <div class="w-13 h-12 bg-sky-500 rounded flex items-center justify-center overflow-hidden">
+            <!-- White Runner Silhouette Avatar -->
+            <svg viewBox="0 0 40 40" class="w-10 h-10 fill-white translate-y-1">
+              <circle cx="20" cy="12" r="7"/>
+              <path d="M 6,38 C 6,26 12,23 20,23 C 28,23 34,26 34,38 Z"/>
+            </svg>
+          </div>
+          <div id="hudHighScoreWidget" class="font-subway text-slate-900 text-xs mt-1">
+            8924
+          </div>
+        </div>
+      </div>
+
+      <!-- Progressive Speed Indicator Bar -->
+      <div class="w-28 bg-black/50 backdrop-blur rounded-full p-0.5 border border-white/20 mt-1">
+        <div class="flex items-center justify-between px-1 text-[8px] font-bold text-amber-300">
+          <span>KELAJUAN</span>
+          <span id="speedMultiplierText">1.0x</span>
+        </div>
+        <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+          <div id="speedBarFill" class="bg-gradient-to-r from-emerald-400 via-amber-400 to-rose-500 h-full w-[10%] transition-all duration-300"></div>
+        </div>
+      </div>
+
+      <!-- Power-Up Active Status Container -->
+      <div id="powerUpStatusContainer" class="flex flex-wrap gap-1.5 mt-1">
+        <div id="badgeMagnet" class="hidden bg-rose-600/90 border border-rose-300 text-[10px] px-2 py-0.5 rounded-full font-bold flex items-center gap-1 shadow-md">
+          <span>🧲 MAGNET</span>
+          <span id="timeMagnet" class="font-mono-tech">10s</span>
+        </div>
+        <div id="badgeSneakers" class="hidden bg-blue-600/90 border border-blue-300 text-[10px] px-2 py-0.5 rounded-full font-bold flex items-center gap-1 shadow-md">
+          <span>👟 SNEAKERS</span>
+          <span id="timeSneakers" class="font-mono-tech">10s</span>
+        </div>
+        <div id="badgeJetpack" class="hidden bg-amber-500/90 border border-amber-200 text-[10px] px-2 py-0.5 rounded-full font-bold flex items-center gap-1 shadow-md animate-bounce">
+          <span>🚀 JETPACK</span>
+          <span id="timeJetpack" class="font-mono-tech">8s</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- TOUCH ON-SCREEN CONTROLS (For Mobile / Tablet Users) -->
+    <div id="mobileControls" class="relative z-20 p-2 sm:p-3 flex justify-between items-end pb-3 pointer-events-none">
+      <div class="flex gap-2 pointer-events-auto">
+        <button id="btnTouchLeft" class="w-13 h-13 bg-white/25 active:bg-amber-500 backdrop-blur-md rounded-2xl border-2 border-white/50 flex items-center justify-center text-xl shadow-lg active:scale-90 transition">
+          ◀
+        </button>
+        <button id="btnTouchRight" class="w-13 h-13 bg-white/25 active:bg-amber-500 backdrop-blur-md rounded-2xl border-2 border-white/50 flex items-center justify-center text-xl shadow-lg active:scale-90 transition">
+          ▶
+        </button>
+      </div>
+
+      <div class="flex flex-col gap-1.5 pointer-events-auto">
+        <button id="btnTouchJump" class="w-14 h-13 bg-emerald-500/85 active:bg-emerald-400 backdrop-blur-md rounded-2xl border-2 border-emerald-200 flex flex-col items-center justify-center shadow-lg active:scale-90 transition">
+          <span class="text-lg leading-none">▲</span>
+          <span class="text-[8px] font-subway">LOMPAT</span>
+        </button>
+        <button id="btnTouchSlide" class="w-14 h-13 bg-amber-500/85 active:bg-amber-400 backdrop-blur-md rounded-2xl border-2 border-amber-200 flex flex-col items-center justify-center shadow-lg active:scale-90 transition">
+          <span class="text-lg leading-none">▼</span>
+          <span class="text-[8px] font-subway">SLIDE</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- START MENU SCREEN (Venice Street Carnival Theme) -->
+    <div id="menuScreen" class="absolute inset-0 bg-gradient-to-b from-slate-950/70 via-slate-900/80 to-slate-950/95 backdrop-blur-sm z-40 flex flex-col items-center justify-between p-5 text-center">
+      
+      <!-- Top Title Logo Banner -->
+      <div class="mt-6 flex flex-col items-center">
+        <!-- 3D Burger & Carnival Mask Badge -->
+        <div class="relative w-22 h-22 flex items-center justify-center mb-2">
+          <div class="w-20 h-20 bg-gradient-to-tr from-amber-500 via-rose-500 to-yellow-300 rounded-3xl border-4 border-white shadow-2xl flex items-center justify-center text-4xl transform -rotate-3">
+            🍔
+          </div>
+          <div class="absolute -bottom-1 -right-1 text-3xl mask-pulse">
+            🎭
+          </div>
+        </div>
+
+        <h1 class="font-subway text-4xl sm:text-5xl text-amber-400 drop-shadow-[0_4px_12px_rgba(245,158,11,0.8)] tracking-wide">
+          BURGUR
+        </h1>
+        <div class="font-subway text-xl sm:text-2xl text-rose-400 tracking-wider -mt-1 drop-shadow">
+          SURF ESCAPE
+        </div>
+        <div class="mt-2 bg-gradient-to-r from-amber-500 to-rose-500 text-slate-950 font-bold px-3 py-0.5 rounded-full text-xs shadow-md">
+          ✨ Disediakan oleh Ana_coder ✨
+        </div>
+      </div>
+
+      <!-- Controls & Features Card -->
+      <div class="w-full max-w-xs bg-slate-900/90 border border-amber-500/40 rounded-2xl p-3 text-xs text-slate-300 space-y-2 shadow-xl">
+        <div class="text-amber-300 font-subway text-xs pb-1 border-b border-slate-800">
+          🎪 MISI KARNIVAL & KELAJUAN EKSTREM
+        </div>
+        <p class="text-[11px] text-slate-300 leading-tight">
+          Lari menyusuri jalanan Mediterranean! Elak kereta api Itali & penghadang jalan. Semakin jauh anda berlari, kelajuan akan menjadi bertambah pantas dan mencabar!
+        </p>
+        <div class="grid grid-cols-2 gap-1.5 text-[10px] text-left">
+          <div class="bg-slate-800/80 p-1.5 rounded border border-slate-700">
+            <span class="text-amber-400 font-bold">⬅️ ➡️ / A D</span>: Tukar Lorong
+          </div>
+          <div class="bg-slate-800/80 p-1.5 rounded border border-slate-700">
+            <span class="text-emerald-400 font-bold">⬆️ / W / Space</span>: Lompat
+          </div>
+          <div class="bg-slate-800/80 p-1.5 rounded border border-slate-700">
+            <span class="text-amber-400 font-bold">⬇️ / S</span>: Gelongsor / Slide
+          </div>
+          <div class="bg-slate-800/80 p-1.5 rounded border border-slate-700">
+            <span class="text-pink-400 font-bold">🎭 Kumpul Topeng</span>: Event 20/20
+          </div>
+        </div>
+      </div>
+
+      <!-- Start Button & High Score Display -->
+      <div class="w-full max-w-xs flex flex-col items-center gap-2 mb-4">
+        <div class="text-xs text-slate-300 flex items-center gap-1.5 font-bold">
+          <span>🏆 REKOD ANDA:</span>
+          <span id="menuBestScore" class="font-subway text-amber-300 text-sm">8924</span>
+        </div>
+
+        <button id="btnStartGame" class="w-full py-4 bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-500 hover:brightness-110 active:scale-95 text-slate-950 font-subway text-2xl rounded-2xl shadow-xl border-b-4 border-emerald-700 tracking-wider transition">
+          MULA LARI! 🏃💨
+        </button>
+      </div>
+
+    </div>
+
+    <!-- PAUSE MENU MODAL -->
+    <div id="pauseScreen" class="hidden absolute inset-0 bg-slate-950/80 backdrop-blur-md z-40 flex flex-col items-center justify-center p-6 text-center">
+      <div class="w-full max-w-xs bg-slate-900 border-4 border-cyan-400 rounded-3xl p-6 shadow-2xl flex flex-col items-center">
+        <div class="font-subway text-3xl text-cyan-300 mb-2">BERHENTI SEBENTAR</div>
+        <p class="text-xs text-slate-300 mb-4">Berehat sebentar sebelum meneruskan larian pantas!</p>
+        <button id="btnResume" class="w-full py-3 bg-gradient-to-r from-cyan-500 to-blue-500 hover:brightness-110 active:scale-95 text-white font-subway text-xl rounded-xl shadow-lg border-b-4 border-cyan-700 mb-2 transition">
+          SAMBUNG
+        </button>
+        <button id="btnQuit" class="w-full py-2.5 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 font-bold text-sm rounded-xl border border-slate-600 transition">
+          MENU UTAMA
+        </button>
+      </div>
+    </div>
+
+    <!-- GAME OVER SCREEN OVERLAY -->
+    <div id="gameOverScreen" class="hidden absolute inset-0 bg-slate-950/85 backdrop-blur-md z-40 flex flex-col items-center justify-center p-6 text-center">
+      <div class="w-full max-w-xs bg-gradient-to-b from-slate-900 to-slate-950 border-4 border-rose-500 rounded-3xl p-6 shadow-2xl flex flex-col items-center">
+        
+        <div class="text-3xl font-subway text-rose-500 mb-1 drop-shadow">TERLANGGAR! 💥</div>
+        <div class="text-xs font-bold text-amber-300 mb-1">BURGUR: SURF ESCAPE</div>
+        <div class="text-[10px] text-slate-400 mb-3">Disediakan oleh Ana_coder</div>
+
+        <!-- Score & Stats Board -->
+        <div class="w-full bg-slate-950/90 rounded-2xl p-4 border border-slate-800 space-y-2.5 mb-4">
+          <div class="flex justify-between items-baseline">
+            <span class="text-xs text-slate-400 font-bold">Skor Akhir:</span>
+            <span id="finalScore" class="font-subway text-2xl text-yellow-300">0</span>
+          </div>
+          <div class="flex justify-between items-baseline">
+            <span class="text-xs text-slate-400 font-bold">Syiling Emas:</span>
+            <span class="font-subway text-lg text-amber-400"><span id="finalCoins">0</span> 🪙</span>
+          </div>
+          <div class="flex justify-between items-baseline">
+            <span class="text-xs text-slate-400 font-bold">Topeng Karnival:</span>
+            <span class="font-subway text-lg text-rose-400"><span id="finalMasks">0</span> 🎭</span>
+          </div>
+          <div class="h-px bg-slate-800"></div>
+          <div class="flex justify-between items-baseline">
+            <span class="text-xs text-slate-400 font-bold">Rekod Tertinggi:</span>
+            <span id="finalBest" class="font-subway text-lg text-emerald-400">8924</span>
+          </div>
+        </div>
+
+        <button id="btnRestartGame" class="w-full py-3.5 bg-gradient-to-r from-amber-500 via-yellow-400 to-orange-400 hover:brightness-110 active:scale-95 text-slate-950 font-subway text-xl rounded-xl shadow-lg border-b-4 border-amber-700 transition">
+          LARI LAGI 🔁
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- JAVASCRIPT GAME ENGINE (THREE.JS 3D WITH VENICE STREETSCAPE & FAST PROGRESSIVE SPEED) -->
+  <script>
+    /* ========================================================
+       1. SYNTHESIZED WEB AUDIO (SOUND EFFECTS & CARNIVAL BEAT)
+       ======================================================== */
+    let audioCtx = null;
+    let isSoundMuted = false;
+
+    function initAudio() {
+      if (!audioCtx) {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (AudioContext) audioCtx = new AudioContext();
+      }
+      if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+    }
+
+    // Lane change Whoosh
+    function playWhoosh() {
+      if (isSoundMuted || !audioCtx) return;
+      try {
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(320, now);
+        osc.frequency.exponentialRampToValueAtTime(700, now + 0.07);
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(now);
+        osc.stop(now + 0.09);
+      } catch (e) {}
+    }
+
+    // Jump sound
+    function playJumpSound() {
+      if (isSoundMuted || !audioCtx) return;
+      try {
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(280, now);
+        osc.frequency.exponentialRampToValueAtTime(800, now + 0.16);
+        gain.gain.setValueAtTime(0.3, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.18);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(now);
+        osc.stop(now + 0.2);
+      } catch (e) {}
+    }
+
+    // Slide Skid sound
+    function playSlideSound() {
+      if (isSoundMuted || !audioCtx) return;
+      try {
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(220, now);
+        osc.frequency.linearRampToValueAtTime(90, now + 0.18);
+        gain.gain.setValueAtTime(0.18, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.18);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(now);
+        osc.stop(now + 0.2);
+      } catch (e) {}
+    }
+
+    // Gold Coin pickup chime
+    function playCoinSound() {
+      if (isSoundMuted || !audioCtx) return;
+      try {
+        const now = audioCtx.currentTime;
+        const freqs = [987, 1318];
+        freqs.forEach((freq, idx) => {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, now + idx * 0.04);
+          gain.gain.setValueAtTime(0.22, now + idx * 0.04);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + idx * 0.04 + 0.12);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(now + idx * 0.04);
+          osc.stop(now + idx * 0.04 + 0.14);
+        });
+      } catch (e) {}
+    }
+
+    // Carnival Mask Special Sound (Harmonic fan fanfare)
+    function playMaskSound() {
+      if (isSoundMuted || !audioCtx) return;
+      try {
+        const now = audioCtx.currentTime;
+        [523, 659, 784, 1046, 1318].forEach((freq, idx) => {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(freq, now + idx * 0.05);
+          gain.gain.setValueAtTime(0.25, now + idx * 0.05);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + idx * 0.05 + 0.2);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(now + idx * 0.05);
+          osc.stop(now + idx * 0.05 + 0.22);
+        });
+      } catch (e) {}
+    }
+
+    // Crash impact sound
+    function playCrashSound() {
+      if (isSoundMuted || !audioCtx) return;
+      try {
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(160, now);
+        osc.frequency.exponentialRampToValueAtTime(30, now + 0.45);
+        gain.gain.setValueAtTime(0.5, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.45);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(now);
+        osc.stop(now + 0.48);
+      } catch (e) {}
+    }
+
+    /* ========================================================
+       2. THREE.JS 3D SCENE & WARM MEDITERRANEAN LIGHTING
+       ======================================================== */
+    const container = document.getElementById('canvasContainer');
+    let scene, camera, renderer;
+    const trackWidth = 7.6;
+    const LANE_X = [-2.4, 0, 2.4]; // 3 Lanes
+    let currentLane = 1; // 0=Left, 1=Center, 2=Right
+    let targetX = 0;
+
+    function initThreeScene() {
+      scene = new THREE.Scene();
+      
+      // Warm pinkish-peach sunset carnival sky as seen in the reference image
+      scene.background = new THREE.Color(0xfb923c); // Warm Sunset Peach
+      scene.fog = new THREE.FogExp2(0xf472b6, 0.014); // Atmospheric pink/peach sunset fog
+
+      const rect = container.getBoundingClientRect();
+      camera = new THREE.PerspectiveCamera(65, rect.width / rect.height, 0.1, 240);
+      // Cinematic low chase camera following behind runner
+      camera.position.set(0, 3.1, 5.8);
+      camera.lookAt(0, 1.4, -8);
+
+      renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+      renderer.setSize(rect.width, rect.height);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      container.appendChild(renderer.domElement);
+
+      // Warm Golden Sunset Lighting
+      const hemiLight = new THREE.HemisphereLight(0xffedd5, 0xc2410c, 0.85);
+      hemiLight.position.set(0, 50, 0);
+      scene.add(hemiLight);
+
+      const dirLight = new THREE.DirectionalLight(0xffedd5, 1.1);
+      dirLight.position.set(10, 25, 15);
+      dirLight.castShadow = true;
+      dirLight.shadow.mapSize.width = 1024;
+      dirLight.shadow.mapSize.height = 1024;
+      dirLight.shadow.camera.near = 0.5;
+      dirLight.shadow.camera.far = 50;
+      dirLight.shadow.camera.left = -8;
+      dirLight.shadow.camera.right = 8;
+      dirLight.shadow.camera.top = 15;
+      dirLight.shadow.camera.bottom = -5;
+      scene.add(dirLight);
+
+      buildMediterraneanEnvironment();
+      createRunnerCharacter();
+    }
+
+    /* ========================================================
+       3. MEDITERRANEAN CARNIVAL STREETSCAPE, AWNINGS & TRACKS
+       ======================================================== */
+    let trackSegments = [];
+    const TRACK_SEGMENT_LENGTH = 44;
+    const NUM_SEGMENTS = 5;
+
+    // Palette of vibrant Mediterranean townhouses (Orange, Terracotta, Yellow, Peach, Teal)
+    const BUILDING_COLORS = [
+      0xf97316, // Orange
+      0xe11d48, // Rich Red / Terracotta
+      0xeab308, // Sunny Yellow
+      0xfb7185, // Rose Peach
+      0x0ea5e9, // Bright Mediterranean Teal
+      0xd97706  // Ochre Amber
+    ];
+
+    function buildMediterraneanEnvironment() {
+      for (let i = 0; i < NUM_SEGMENTS; i++) {
+        const group = new THREE.Group();
+        group.position.z = -i * TRACK_SEGMENT_LENGTH;
+
+        // 1. Warm Cobblestone Track Bed
+        const groundGeo = new THREE.PlaneGeometry(trackWidth, TRACK_SEGMENT_LENGTH);
+        const groundMat = new THREE.MeshStandardMaterial({ 
+          color: 0x9a5c37, // Warm terracotta cobblestone brown
+          roughness: 0.85 
+        });
+        const ground = new THREE.Mesh(groundGeo, groundMat);
+        ground.rotation.x = -Math.PI / 2;
+        ground.receiveShadow = true;
+        group.add(ground);
+
+        // Sidewalk pavements with yellow stone curbs on left & right
+        for (let side of [-1, 1]) {
+          const sideWalkGeo = new THREE.BoxGeometry(4.5, 0.25, TRACK_SEGMENT_LENGTH);
+          const sideWalkMat = new THREE.MeshStandardMaterial({ color: 0xfde047, roughness: 0.7 });
+          const sidewalk = new THREE.Mesh(sideWalkGeo, sideWalkMat);
+          sidewalk.position.set(side * (trackWidth / 2 + 2.25), 0.12, 0);
+          sidewalk.receiveShadow = true;
+          group.add(sidewalk);
+        }
+
+        // 2. 3 Subway Rail pairs with glowing reflective silver surface & wooden sleepers
+        [-2.4, 0, 2.4].forEach(lx => {
+          [-0.48, 0.48].forEach(rx => {
+            const railGeo = new THREE.BoxGeometry(0.12, 0.14, TRACK_SEGMENT_LENGTH);
+            const railMat = new THREE.MeshStandardMaterial({ 
+              color: 0xe2e8f0, 
+              metalness: 0.9, 
+              roughness: 0.15 
+            });
+            const rail = new THREE.Mesh(railGeo, railMat);
+            rail.position.set(lx + rx, 0.07, 0);
+            group.add(rail);
+          });
+
+          // Wooden sleepers under rails
+          for (let z = -TRACK_SEGMENT_LENGTH / 2; z < TRACK_SEGMENT_LENGTH / 2; z += 1.6) {
+            const sleeperGeo = new THREE.BoxGeometry(1.3, 0.08, 0.38);
+            const sleeperMat = new THREE.MeshStandardMaterial({ color: 0x451a03, roughness: 0.9 });
+            const sleeper = new THREE.Mesh(sleeperGeo, sleeperMat);
+            sleeper.position.set(lx, 0.04, z);
+            group.add(sleeper);
+          }
+        });
+
+        // 3. Colorful Townhouses flanking both sides with striped awnings & tables
+        for (let side of [-1, 1]) {
+          for (let bz = -TRACK_SEGMENT_LENGTH / 2 + 4; bz < TRACK_SEGMENT_LENGTH / 2; bz += 8) {
+            const bHeight = 14 + Math.random() * 8;
+            const bWidth = 6.5;
+            const bColor = BUILDING_COLORS[Math.floor(Math.random() * BUILDING_COLORS.length)];
+
+            // Main House Facade
+            const houseGeo = new THREE.BoxGeometry(bWidth, bHeight, 7.5);
+            const houseMat = new THREE.MeshStandardMaterial({ color: bColor, roughness: 0.6 });
+            const house = new THREE.Mesh(houseGeo, houseMat);
+            house.position.set(side * (trackWidth / 2 + 5.5), bHeight / 2, bz);
+            house.castShadow = true;
+            house.receiveShadow = true;
+            group.add(house);
+
+            // Striped Cafe Awning (Red/White or Green/White)
+            const awningColor = Math.random() > 0.5 ? 0xdc2626 : 0x16a34a;
+            const awningGeo = new THREE.BoxGeometry(2.4, 0.15, 3.2);
+            const awningMat = new THREE.MeshStandardMaterial({ color: awningColor, roughness: 0.5 });
+            const awning = new THREE.Mesh(awningGeo, awningMat);
+            awning.position.set(side * (trackWidth / 2 + 1.2), 2.2, bz);
+            awning.rotation.z = side * 0.28;
+            group.add(awning);
+
+            // Outdoor Cafe Dining Tables with Flower Vases
+            const tableGeo = new THREE.CylinderGeometry(0.4, 0.4, 0.6, 12);
+            const tableMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.4 });
+            const table = new THREE.Mesh(tableGeo, tableMat);
+            table.position.set(side * (trackWidth / 2 + 1.3), 0.5, bz);
+            group.add(table);
+
+            // Windows on facades with warm lit frames
+            for (let wy = 4.5; wy < bHeight - 2; wy += 3.2) {
+              const winGeo = new THREE.BoxGeometry(1.2, 1.8, 0.1);
+              const winMat = new THREE.MeshStandardMaterial({ color: 0xfef08a, roughness: 0.3 });
+              const win = new THREE.Mesh(winGeo, winMat);
+              win.position.set(side * (trackWidth / 2 + 1.8), wy, bz);
+              group.add(win);
+            }
+          }
+        }
+
+        // 4. Overhead Catenary Railway Wires & Metallic Street Posts
+        for (let pz = -TRACK_SEGMENT_LENGTH / 2; pz < TRACK_SEGMENT_LENGTH / 2; pz += 15) {
+          // Overhead Arch Bridge Support
+          const archGeo = new THREE.BoxGeometry(trackWidth + 1.6, 0.18, 0.18);
+          const archMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, metalness: 0.6 }); // Cyan metal gantry
+          const arch = new THREE.Mesh(archGeo, archMat);
+          arch.position.set(0, 5.2, pz);
+          group.add(arch);
+
+          // Left and Right Posts
+          [-trackWidth / 2 - 0.7, trackWidth / 2 + 0.7].forEach(px => {
+            const postGeo = new THREE.CylinderGeometry(0.08, 0.08, 5.5, 8);
+            const postMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8 });
+            const post = new THREE.Mesh(postGeo, postMat);
+            post.position.set(px, 2.7, pz);
+            group.add(post);
+          });
+
+          // Festive Carnival Bunting Flags across tracks
+          for (let fx = -2.6; fx <= 2.6; fx += 0.8) {
+            const flagGeo = new THREE.ConeGeometry(0.2, 0.35, 3);
+            const flagMat = new THREE.MeshStandardMaterial({ 
+              color: [0xf43f5e, 0xfacc15, 0x38bdf8, 0x4ade80][Math.floor(Math.random() * 4)] 
+            });
+            const flag = new THREE.Mesh(flagGeo, flagMat);
+            flag.position.set(fx, 4.9, pz);
+            flag.rotation.z = Math.PI;
+            group.add(flag);
+          }
+        }
+
+        // Overhead High Voltage Black Electrical Wires (continuous)
+        [-2.4, 0, 2.4].forEach(wx => {
+          const wireGeo = new THREE.BoxGeometry(0.02, 0.02, TRACK_SEGMENT_LENGTH);
+          const wireMat = new THREE.MeshBasicMaterial({ color: 0x0f172a });
+          const wire = new THREE.Mesh(wireGeo, wireMat);
+          wire.position.set(wx, 5.1, 0);
+          group.add(wire);
+        });
+
+        scene.add(group);
+        trackSegments.push(group);
+      }
+    }
+
+    /* ========================================================
+       4. AUTHENTIC RUNNER CHARACTER (White Hoodie, Cap & Backpack)
+       ======================================================== */
+    let playerGroup, playerBody, leftLeg, rightLeg, leftArm, rightArm;
+    const player = {
+      lane: 1,
+      x: 0,
+      y: 0,
+      z: 0,
+      vy: 0,
+      isJumping: false,
+      isSliding: false,
+      slideTimer: 0,
+      jumpVelocity: 0.36,
+      gravity: 0.016,
+      runAnimCycle: 0
+    };
+
+    function createRunnerCharacter() {
+      playerGroup = new THREE.Group();
+      playerGroup.position.set(0, 0, 0);
+
+      playerBody = new THREE.Group();
+      playerBody.position.y = 0.1;
+
+      // 1. Torso: White Oversized Hoodie with "SUB SURF" emblem
+      const torsoGeo = new THREE.BoxGeometry(0.68, 0.72, 0.42);
+      const hoodieMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5 });
+      const torso = new THREE.Mesh(torsoGeo, hoodieMat);
+      torso.position.y = 0.82;
+      torso.castShadow = true;
+      playerBody.add(torso);
+
+      // Blue Denim Vest / Backpack over hoodie
+      const packGeo = new THREE.BoxGeometry(0.48, 0.5, 0.22);
+      const packMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.6 }); // Denim blue
+      const pack = new THREE.Mesh(packGeo, packMat);
+      pack.position.set(0, 0.85, 0.28);
+      pack.castShadow = true;
+      playerBody.add(pack);
+
+      // 2. Head with Turned Back Cap (Iconic Subway Surfers Look)
+      const headGeo = new THREE.SphereGeometry(0.26, 16, 16);
+      const skinMat = new THREE.MeshStandardMaterial({ color: 0xfed7aa, roughness: 0.4 });
+      const head = new THREE.Mesh(headGeo, skinMat);
+      head.position.y = 1.34;
+      head.castShadow = true;
+      playerBody.add(head);
+
+      // White Cap with Bill facing backwards
+      const capGeo = new THREE.SphereGeometry(0.28, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2);
+      const capMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.4 });
+      const cap = new THREE.Mesh(capGeo, capMat);
+      cap.position.set(0, 1.4, 0);
+      playerBody.add(cap);
+
+      const billGeo = new THREE.BoxGeometry(0.26, 0.04, 0.24);
+      const bill = new THREE.Mesh(billGeo, capMat);
+      bill.position.set(0, 1.38, 0.26);
+      playerBody.add(bill);
+
+      // 3. Animated Legs (Blue Jeans & High-top Sneakers)
+      const legGeo = new THREE.BoxGeometry(0.2, 0.52, 0.22);
+      const jeansMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, roughness: 0.7 });
+      const shoeMat = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.5 });
+
+      // Left Leg
+      leftLeg = new THREE.Group();
+      leftLeg.position.set(-0.18, 0.52, 0);
+      const lJeans = new THREE.Mesh(legGeo, jeansMat);
+      lJeans.position.y = -0.26;
+      lJeans.castShadow = true;
+      leftLeg.add(lJeans);
+      const lShoe = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.12, 0.32), shoeMat);
+      lShoe.position.set(0, -0.48, 0.04);
+      leftLeg.add(lShoe);
+      playerBody.add(leftLeg);
+
+      // Right Leg
+      rightLeg = new THREE.Group();
+      rightLeg.position.set(0.18, 0.52, 0);
+      const rJeans = new THREE.Mesh(legGeo, jeansMat);
+      rJeans.position.y = -0.26;
+      rJeans.castShadow = true;
+      rightLeg.add(rJeans);
+      const rShoe = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.12, 0.32), shoeMat);
+      rShoe.position.set(0, -0.48, 0.04);
+      rightLeg.add(rShoe);
+      playerBody.add(rightLeg);
+
+      // 4. Arms
+      const armGeo = new THREE.BoxGeometry(0.15, 0.48, 0.18);
+      leftArm = new THREE.Mesh(armGeo, hoodieMat);
+      leftArm.position.set(-0.42, 0.82, 0);
+      playerBody.add(leftArm);
+
+      rightArm = new THREE.Mesh(armGeo, hoodieMat);
+      rightArm.position.set(0.42, 0.82, 0);
+      playerBody.add(rightArm);
+
+      playerGroup.add(playerBody);
+      scene.add(playerGroup);
+    }
+
+    /* ========================================================
+       5. OBSTACLES (EUROPEAN COMMUTER TRAINS & CARNIVAL HURDLES)
+       ======================================================== */
+    let obstacles = [];
+    let collectibles = []; // Gold coins & special carnival masks
+    let powerUps = [];
+
+    const OBSTACLE_TYPES = {
+      TRAIN: 0,
+      LOW_HURDLE: 1,
+      HIGH_HURDLE: 2
+    };
+
+    function spawnObstacleRow(zPos) {
+      const availableLanes = [0, 1, 2];
+      const count = Math.random() < 0.6 ? 1 : 2; // Keep at least 1 lane open
+      const chosenLanes = [];
+
+      for (let i = 0; i < count; i++) {
+        const idx = Math.floor(Math.random() * availableLanes.length);
+        chosenLanes.push(availableLanes.splice(idx, 1)[0]);
+      }
+
+      chosenLanes.forEach(laneIdx => {
+        const randType = Math.random();
+        let obsType = OBSTACLE_TYPES.LOW_HURDLE;
+        if (randType < 0.48) obsType = OBSTACLE_TYPES.TRAIN;
+        else if (randType < 0.78) obsType = OBSTACLE_TYPES.LOW_HURDLE;
+        else obsType = OBSTACLE_TYPES.HIGH_HURDLE;
+
+        const obsGroup = new THREE.Group();
+        obsGroup.position.set(LANE_X[laneIdx], 0, zPos);
+        obsGroup.userData = { type: obsType, lane: laneIdx };
+
+        if (obsType === OBSTACLE_TYPES.TRAIN) {
+          // EUROPEAN TEAL / GREEN COMMUTER SUBWAY TRAIN (From Reference)
+          const trainLength = 10;
+          const trainHeight = 3.4;
+          const trainGeo = new THREE.BoxGeometry(1.85, trainHeight, trainLength);
+          const trainMat = new THREE.MeshStandardMaterial({ 
+            color: 0x059669, // Emerald / Teal European train body
+            metalness: 0.5, 
+            roughness: 0.3 
+          });
+          const train = new THREE.Mesh(trainGeo, trainMat);
+          train.position.y = trainHeight / 2;
+          train.castShadow = true;
+          train.receiveShadow = true;
+          obsGroup.add(train);
+
+          // Aerodynamic Curved Cab Front
+          const cabGeo = new THREE.BoxGeometry(1.8, 1.2, 0.4);
+          const cabMat = new THREE.MeshStandardMaterial({ color: 0x34d399 });
+          const cab = new THREE.Mesh(cabGeo, cabMat);
+          cab.position.set(0, 2.2, trainLength / 2 + 0.15);
+          obsGroup.add(cab);
+
+          // 3 Front Windshield Glass Panes
+          [-0.5, 0, 0.5].forEach(wx => {
+            const win = new THREE.Mesh(
+              new THREE.PlaneGeometry(0.38, 0.6),
+              new THREE.MeshBasicMaterial({ color: 0x0284c7 })
+            );
+            win.position.set(wx, 2.3, trainLength / 2 + 0.36);
+            obsGroup.add(win);
+          });
+
+          // Twin Glowing Headlights
+          [-0.55, 0.55].forEach(hx => {
+            const light = new THREE.Mesh(
+              new THREE.CylinderGeometry(0.16, 0.16, 0.1, 16),
+              new THREE.MeshBasicMaterial({ color: 0xfef08a })
+            );
+            light.rotation.x = Math.PI / 2;
+            light.position.set(hx, 1.1, trainLength / 2 + 0.22);
+            obsGroup.add(light);
+          });
+
+          obsGroup.userData.hitbox = { w: 1.85, h: 3.4, d: trainLength };
+        } 
+        else if (obsType === OBSTACLE_TYPES.LOW_HURDLE) {
+          // RED & WHITE CARNIVAL ROAD HURDLE
+          const hurdleGeo = new THREE.BoxGeometry(1.9, 0.68, 0.25);
+          const hurdleMat = new THREE.MeshStandardMaterial({ color: 0xef4444, roughness: 0.4 });
+          const hurdle = new THREE.Mesh(hurdleGeo, hurdleMat);
+          hurdle.position.y = 0.34;
+          hurdle.castShadow = true;
+          obsGroup.add(hurdle);
+
+          // White diagonal stripes
+          const stripe = new THREE.Mesh(new THREE.BoxGeometry(1.92, 0.2, 0.26), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+          stripe.position.y = 0.34;
+          obsGroup.add(stripe);
+
+          obsGroup.userData.hitbox = { w: 1.9, h: 0.7, d: 0.3 };
+        } 
+        else if (obsType === OBSTACLE_TYPES.HIGH_HURDLE) {
+          // HIGH OVERHEAD SIGN GANTRY (MUST SLIDE UNDER)
+          const gantryGeo = new THREE.BoxGeometry(2.0, 0.85, 0.22);
+          const gantryMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.3 }); // Yellow Caution
+          const gantry = new THREE.Mesh(gantryGeo, gantryMat);
+          gantry.position.y = 1.95;
+          gantry.castShadow = true;
+          obsGroup.add(gantry);
+
+          // Support poles
+          [-0.95, 0.95].forEach(px => {
+            const pole = new THREE.Mesh(
+              new THREE.CylinderGeometry(0.06, 0.06, 2.4, 8),
+              new THREE.MeshStandardMaterial({ color: 0x475569 })
+            );
+            pole.position.set(px, 1.2, 0);
+            obsGroup.add(pole);
+          });
+
+          obsGroup.userData.hitbox = { w: 1.9, minH: 1.1, h: 2.4, d: 0.3 };
+        }
+
+        scene.add(obsGroup);
+        obstacles.push(obsGroup);
+      });
+
+      // Spawn Star Gold Coins on the free lane
+      availableLanes.forEach(freeLane => {
+        if (Math.random() < 0.85) {
+          spawnStarCoinTrail(LANE_X[freeLane], zPos);
+        }
+      });
+
+      // Rare Carnival Mask Token (Special Event Item like in reference)
+      if (Math.random() < 0.25) {
+        const randLane = Math.floor(Math.random() * 3);
+        spawnCarnivalMask(LANE_X[randLane], zPos - 12);
+      }
+
+      // Rare Power-Up Spawn (Magnet / Sneakers / Jetpack)
+      if (Math.random() < 0.14) {
+        const randLane = Math.floor(Math.random() * 3);
+        spawnPowerUpOrb(LANE_X[randLane], zPos - 20);
+      }
+    }
+
+    // Authentic Star Gold Coin matching Subway Surfers
+    function spawnStarCoinTrail(laneX, startZ) {
+      for (let i = 0; i < 4; i++) {
+        const coinGroup = new THREE.Group();
+        coinGroup.position.set(laneX, 0.75, startZ - i * 2.4);
+
+        // Shiny Gold Rim
+        const rimGeo = new THREE.CylinderGeometry(0.34, 0.34, 0.08, 16);
+        const goldMat = new THREE.MeshStandardMaterial({ 
+          color: 0xfacc15, 
+          metalness: 0.85, 
+          roughness: 0.2 
+        });
+        const rim = new THREE.Mesh(rimGeo, goldMat);
+        rim.rotation.x = Math.PI / 2;
+        coinGroup.add(rim);
+
+        // Inner Embossed Star
+        const starGeo = new THREE.ConeGeometry(0.18, 0.1, 5);
+        const starMat = new THREE.MeshBasicMaterial({ color: 0xfffbeb });
+        const star = new THREE.Mesh(starGeo, starMat);
+        star.position.z = 0.04;
+        coinGroup.add(star);
+
+        coinGroup.userData = { isMask: false, rotSpeed: 0.04 };
+        scene.add(coinGroup);
+        collectibles.push(coinGroup);
+      }
+    }
+
+    // Special Carnival Mask Collectible (Venetian Mask with Particle Aura)
+    function spawnCarnivalMask(laneX, zPos) {
+      const maskGroup = new THREE.Group();
+      maskGroup.position.set(laneX, 1.1, zPos);
+
+      // Pink & Gold Venetian Carnival Mask Geometry
+      const maskFaceGeo = new THREE.BoxGeometry(0.65, 0.42, 0.08);
+      const maskMat = new THREE.MeshStandardMaterial({ 
+        color: 0xf43f5e, 
+        emissive: 0xf43f5e, 
+        emissiveIntensity: 0.4 
+      });
+      const maskFace = new THREE.Mesh(maskFaceGeo, maskMat);
+      maskGroup.add(maskFace);
+
+      // Eye cutouts
+      [-0.16, 0.16].forEach(ex => {
+        const eye = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.08, 0.1), new THREE.MeshBasicMaterial({ color: 0x0f172a }));
+        eye.position.set(ex, 0.04, 0.02);
+        maskGroup.add(eye);
+      });
+
+      // Gold Halo Ring around mask
+      const haloGeo = new THREE.RingGeometry(0.5, 0.58, 16);
+      const haloMat = new THREE.MeshBasicMaterial({ color: 0xfde047, side: THREE.DoubleSide });
+      const halo = new THREE.Mesh(haloGeo, haloMat);
+      maskGroup.add(halo);
+
+      maskGroup.userData = { isMask: true, rotSpeed: 0.06 };
+      scene.add(maskGroup);
+      collectibles.push(maskGroup);
+    }
+
+    // Power-Up Orbs
+    function spawnPowerUpOrb(laneX, zPos) {
+      const types = ['MAGNET', 'SNEAKERS', 'JETPACK'];
+      const pType = types[Math.floor(Math.random() * types.length)];
+
+      const group = new THREE.Group();
+      group.position.set(laneX, 1.1, zPos);
+
+      let color = 0xef4444;
+      if (pType === 'SNEAKERS') color = 0x3b82f6;
+      if (pType === 'JETPACK') color = 0xf59e0b;
+
+      const orbGeo = new THREE.SphereGeometry(0.42, 16, 16);
+      const orbMat = new THREE.MeshStandardMaterial({ 
+        color: color, 
+        emissive: color, 
+        emissiveIntensity: 0.5,
+        roughness: 0.2
+      });
+      const orb = new THREE.Mesh(orbGeo, orbMat);
+      group.add(orb);
+
+      group.userData = { type: pType };
+      scene.add(group);
+      powerUps.push(group);
+    }
+
+    /* ========================================================
+       6. GAME PROGRESSION & ACCELERATION MECHANICS
+       ======================================================== */
+    let isPlaying = false;
+    let isPaused = false;
+    let score = 0;
+    let coinsCount = 0;
+    let masksCount = 0;
+    let highScore = parseInt(localStorage.getItem('burgur_surf_best') || '8924', 10);
+    
+    // PROGRESSIVE SPEED ACCELERATION CONSTANTS
+    const START_SPEED = 0.44;     // Brik starting run
+    let currentSpeed = START_SPEED;
+    const MAX_SPEED = 1.18;       // Super fast adrenaline rush!
+    const ACCELERATION_RATE = 0.00018; // Continuously speeds up over time/distance
+    let nextSpawnZ = -30;
+
+    // Power-up durations
+    const activeBuffs = {
+      magnet: 0,
+      sneakers: 0,
+      jetpack: 0
+    };
+
+    // UI Elements
+    const hudScore = document.getElementById('hudScore');
+    const hudCoins = document.getElementById('hudCoins');
+    const hudMasks = document.getElementById('hudMasks');
+    const hudHighScoreWidget = document.getElementById('hudHighScoreWidget');
+    const speedMultiplierText = document.getElementById('speedMultiplierText');
+    const speedBarFill = document.getElementById('speedBarFill');
+    const speedOverlay = document.getElementById('speedOverlay');
+
+    const menuScreen = document.getElementById('menuScreen');
+    const gameOverScreen = document.getElementById('gameOverScreen');
+    const pauseScreen = document.getElementById('pauseScreen');
+    const btnStartGame = document.getElementById('btnStartGame');
+    const btnRestartGame = document.getElementById('btnRestartGame');
+    const btnPause = document.getElementById('btnPause');
+    const btnResume = document.getElementById('btnResume');
+    const btnQuit = document.getElementById('btnQuit');
+
+    const badgeMagnet = document.getElementById('badgeMagnet');
+    const timeMagnet = document.getElementById('timeMagnet');
+    const badgeSneakers = document.getElementById('badgeSneakers');
+    const timeSneakers = document.getElementById('timeSneakers');
+    const badgeJetpack = document.getElementById('badgeJetpack');
+    const timeJetpack = document.getElementById('timeJetpack');
+
+    hudHighScoreWidget.innerText = highScore;
+    document.getElementById('menuBestScore').innerText = highScore;
+
+    function moveLeft() {
+      if (!isPlaying || isPaused) return;
+      if (currentLane > 0) {
+        currentLane--;
+        targetX = LANE_X[currentLane];
+        playWhoosh();
+      }
+    }
+
+    function moveRight() {
+      if (!isPlaying || isPaused) return;
+      if (currentLane < 2) {
+        currentLane++;
+        targetX = LANE_X[currentLane];
+        playWhoosh();
+      }
+    }
+
+    function jump() {
+      if (!isPlaying || isPaused) return;
+      if (!player.isJumping) {
+        player.isJumping = true;
+        const jumpBoost = activeBuffs.sneakers > 0 ? 1.45 : 1.0;
+        player.vy = player.jumpVelocity * jumpBoost;
+        playJumpSound();
+
+        if (player.isSliding) {
+          player.isSliding = false;
+          playerBody.scale.set(1, 1, 1);
+        }
+      }
+    }
+
+    function slide() {
+      if (!isPlaying || isPaused) return;
+      if (!player.isSliding) {
+        player.isSliding = true;
+        player.slideTimer = 34;
+        playSlideSound();
+        playerBody.scale.set(1.2, 0.44, 1.2);
+
+        // Fast dive if in mid-air
+        if (player.isJumping) {
+          player.vy = -0.38;
+        }
+      }
+    }
+
+    /* ========================================================
+       7. MAIN GAMEPLAY UPDATE LOOP (SILKY 60 FPS)
+       ======================================================== */
+    function updateGame() {
+      if (!isPlaying || isPaused) return;
+
+      // 1. PROGRESSIVE ACCELERATION (Makin lama makin laju!)
+      if (currentSpeed < MAX_SPEED) {
+        currentSpeed += ACCELERATION_RATE;
+      }
+
+      // Update speed UI & Speed streaks
+      const speedRatio = (currentSpeed - START_SPEED) / (MAX_SPEED - START_SPEED);
+      speedMultiplierText.innerText = `${(1 + speedRatio * 1.5).toFixed(1)}x`;
+      speedBarFill.style.width = `${Math.min(100, Math.max(10, speedRatio * 100))}%`;
+
+      if (speedRatio > 0.45) {
+        speedOverlay.style.opacity = `${(speedRatio - 0.45) * 1.5}`;
+      } else {
+        speedOverlay.style.opacity = '0';
+      }
+
+      // Score progression scaled with speed & multiplier (x6)
+      score += Math.floor(currentSpeed * 6);
+      hudScore.innerText = score.toString().padStart(6, '0');
+
+      // 2. Smooth Lane Switching (Lerp)
+      player.x += (targetX - player.x) * 0.22;
+      playerGroup.position.x = player.x;
+
+      // Tilting effect when switching lanes
+      const tilt = (player.x - targetX) * 0.16;
+      playerGroup.rotation.z = tilt;
+
+      // 3. Jump & Slide Physics
+      if (activeBuffs.jetpack > 0) {
+        // Fly high above tracks!
+        player.y += (4.2 - player.y) * 0.1;
+      } else {
+        if (player.isJumping) {
+          player.y += player.vy;
+          player.vy -= player.gravity;
+          if (player.y <= 0) {
+            player.y = 0;
+            player.vy = 0;
+            player.isJumping = false;
+          }
+        }
+      }
+
+      if (player.isSliding) {
+        player.slideTimer--;
+        if (player.slideTimer <= 0) {
+          player.isSliding = false;
+          playerBody.scale.set(1, 1, 1);
+        }
+      }
+
+      playerGroup.position.y = player.y;
+
+      // Animated Running Limbs Cycle
+      if (!player.isJumping && !player.isSliding) {
+        player.runAnimCycle += currentSpeed * 1.2;
+        leftLeg.rotation.x = Math.sin(player.runAnimCycle) * 0.65;
+        rightLeg.rotation.x = -Math.sin(player.runAnimCycle) * 0.65;
+        leftArm.rotation.x = -Math.sin(player.runAnimCycle) * 0.6;
+        rightArm.rotation.x = Math.sin(player.runAnimCycle) * 0.6;
+      } else {
+        leftLeg.rotation.x = 0;
+        rightLeg.rotation.x = 0;
+      }
+
+      // 4. Move Track Segments backwards at progressive speed
+      trackSegments.forEach(seg => {
+        seg.position.z += currentSpeed;
+        if (seg.position.z > TRACK_SEGMENT_LENGTH) {
+          seg.position.z -= TRACK_SEGMENT_LENGTH * NUM_SEGMENTS;
+        }
+      });
+
+      // 5. Procedural Obstacle Spawning
+      nextSpawnZ += currentSpeed;
+      if (nextSpawnZ >= 0) {
+        spawnObstacleRow(-75);
+        // Faster game requires slightly spaced spawns for fairness
+        nextSpawnZ = -34;
+      }
+
+      // 6. Update Active Power-ups Countdown
+      for (let buff in activeBuffs) {
+        if (activeBuffs[buff] > 0) {
+          activeBuffs[buff] -= 1 / 60;
+          if (activeBuffs[buff] <= 0) activeBuffs[buff] = 0;
+        }
+      }
+
+      badgeMagnet.classList.toggle('hidden', activeBuffs.magnet <= 0);
+      timeMagnet.innerText = `${Math.ceil(activeBuffs.magnet)}s`;
+      badgeSneakers.classList.toggle('hidden', activeBuffs.sneakers <= 0);
+      timeSneakers.innerText = `${Math.ceil(activeBuffs.sneakers)}s`;
+      badgeJetpack.classList.toggle('hidden', activeBuffs.jetpack <= 0);
+      timeJetpack.innerText = `${Math.ceil(activeBuffs.jetpack)}s`;
+
+      // 7. Update Obstacles & Per-Frame Hitbox Collision Detection
+      for (let i = obstacles.length - 1; i >= 0; i--) {
+        const obs = obstacles[i];
+        obs.position.z += currentSpeed;
+
+        const pz = playerGroup.position.z;
+        const dz = Math.abs(obs.position.z - pz);
+        const dx = Math.abs(obs.position.x - player.x);
+
+        // If in same lane
+        if (dx < 0.95 && activeBuffs.jetpack <= 0) {
+          const uData = obs.userData;
+          
+          if (uData.type === OBSTACLE_TYPES.TRAIN) {
+            // Train car length 10
+            if (obs.position.z > pz - 5.0 && obs.position.z < pz + 5.0) {
+              triggerGameOver();
+              return;
+            }
+          } 
+          else if (uData.type === OBSTACLE_TYPES.LOW_HURDLE) {
+            if (dz < 0.65 && player.y < 0.72) {
+              triggerGameOver();
+              return;
+            }
+          } 
+          else if (uData.type === OBSTACLE_TYPES.HIGH_HURDLE) {
+            if (dz < 0.65 && !player.isSliding && player.y > 0.3) {
+              triggerGameOver();
+              return;
+            }
+          }
+        }
+
+        // Remove offscreen obstacles
+        if (obs.position.z > 14) {
+          scene.remove(obs);
+          obstacles.splice(i, 1);
+        }
+      }
+
+      // 8. Update Gold Coins & Carnival Mask Collectibles
+      for (let i = collectibles.length - 1; i >= 0; i--) {
+        const item = collectibles[i];
+        item.position.z += currentSpeed;
+        item.rotation.y += item.userData.rotSpeed;
+
+        // Magnet attraction if active
+        if (activeBuffs.magnet > 0 && !item.userData.isMask && item.position.z < 10 && item.position.z > -16) {
+          item.position.x += (player.x - item.position.x) * 0.16;
+          item.position.y += (player.y + 0.6 - item.position.y) * 0.16;
+        }
+
+        const dist = item.position.distanceTo(new THREE.Vector3(player.x, player.y + 0.6, player.z));
+        if (dist < 1.15) {
+          if (item.userData.isMask) {
+            masksCount++;
+            hudMasks.innerText = `${masksCount}/20`;
+            playMaskSound();
+          } else {
+            coinsCount++;
+            hudCoins.innerText = coinsCount;
+            playCoinSound();
+          }
+
+          scene.remove(item);
+          collectibles.splice(i, 1);
+          continue;
+        }
+
+        if (item.position.z > 14) {
+          scene.remove(item);
+          collectibles.splice(i, 1);
+        }
+      }
+
+      // 9. Update Power-Up Orbs
+      for (let i = powerUps.length - 1; i >= 0; i--) {
+        const pOrb = powerUps[i];
+        pOrb.position.z += currentSpeed;
+        pOrb.rotation.y += 0.05;
+
+        const dist = pOrb.position.distanceTo(new THREE.Vector3(player.x, player.y + 0.6, player.z));
+        if (dist < 1.2) {
+          playMaskSound();
+          if (pOrb.userData.type === 'MAGNET') activeBuffs.magnet = 10;
+          if (pOrb.userData.type === 'SNEAKERS') activeBuffs.sneakers = 10;
+          if (pOrb.userData.type === 'JETPACK') activeBuffs.jetpack = 8;
+
+          scene.remove(pOrb);
+          powerUps.splice(i, 1);
+          continue;
+        }
+
+        if (pOrb.position.z > 14) {
+          scene.remove(pOrb);
+          powerUps.splice(i, 1);
+        }
+      }
+    }
+
+    function triggerGameOver() {
+      isPlaying = false;
+      playCrashSound();
+
+      document.getElementById('finalScore').innerText = score;
+      document.getElementById('finalCoins').innerText = coinsCount;
+      document.getElementById('finalMasks').innerText = `${masksCount}/20`;
+
+      let isNew = false;
+      if (score > highScore) {
+        highScore = score;
+        localStorage.setItem('burgur_surf_best', highScore.toString());
+        isNew = true;
+      }
+      document.getElementById('finalBest').innerText = highScore;
+      hudHighScoreWidget.innerText = highScore;
+
+      if (isNew && score > 2000) {
+        try {
+          confetti({ particleCount: 50, spread: 70, origin: { y: 0.6 } });
+        } catch (e) {}
+      }
+
+      setTimeout(() => {
+        gameOverScreen.classList.remove('hidden');
+      }, 450);
+    }
+
+    function resetGame() {
+      initAudio();
+
+      obstacles.forEach(o => scene.remove(o));
+      obstacles = [];
+      collectibles.forEach(c => scene.remove(c));
+      collectibles = [];
+      powerUps.forEach(p => scene.remove(p));
+      powerUps = [];
+
+      currentLane = 1;
+      targetX = 0;
+      player.x = 0;
+      player.y = 0;
+      player.vy = 0;
+      player.isJumping = false;
+      player.isSliding = false;
+      playerGroup.position.set(0, 0, 0);
+      playerBody.scale.set(1, 1, 1);
+
+      score = 0;
+      coinsCount = 0;
+      masksCount = 0;
+      currentSpeed = START_SPEED; // Reset to brisk start
+      nextSpawnZ = -22;
+
+      activeBuffs.magnet = 0;
+      activeBuffs.sneakers = 0;
+      activeBuffs.jetpack = 0;
+
+      hudScore.innerText = '000000';
+      hudCoins.innerText = '0';
+      hudMasks.innerText = '0/20';
+
+      menuScreen.classList.add('hidden');
+      gameOverScreen.classList.add('hidden');
+      pauseScreen.classList.add('hidden');
+      isPaused = false;
+      isPlaying = true;
+    }
+
+    /* ========================================================
+       8. ANIMATION LOOP & RESIZE
+       ======================================================== */
+    function animate() {
+      requestAnimationFrame(animate);
+      updateGame();
+      renderer.render(scene, camera);
+    }
+
+    window.addEventListener('resize', () => {
+      if (!renderer || !container) return;
+      const rect = container.getBoundingClientRect();
+      camera.aspect = rect.width / rect.height;
+      camera.updateProjectionMatrix();
+      renderer.setSize(rect.width, rect.height);
+    });
+
+    /* ========================================================
+       9. INPUT CONTROLS: KEYBOARD, TOUCH & PAUSE
+       ======================================================== */
+    window.addEventListener('keydown', (e) => {
+      if (!isPlaying || isPaused) return;
+      if (e.code === 'ArrowLeft' || e.code === 'KeyA') {
+        e.preventDefault(); moveLeft();
+      } else if (e.code === 'ArrowRight' || e.code === 'KeyD') {
+        e.preventDefault(); moveRight();
+      } else if (e.code === 'ArrowUp' || e.code === 'KeyW' || e.code === 'Space') {
+        e.preventDefault(); jump();
+      } else if (e.code === 'ArrowDown' || e.code === 'KeyS') {
+        e.preventDefault(); slide();
+      }
+    });
+
+    // Mobile Swipe Gestures
+    let touchStartX = 0;
+    let touchStartY = 0;
+    const SWIPE_THRESHOLD = 30;
+
+    container.addEventListener('touchstart', (e) => {
+      touchStartX = e.changedTouches[0].screenX;
+      touchStartY = e.changedTouches[0].screenY;
+    }, { passive: true });
+
+    container.addEventListener('touchend', (e) => {
+      const touchEndX = e.changedTouches[0].screenX;
+      const touchEndY = e.changedTouches[0].screenY;
+      const dx = touchEndX - touchStartX;
+      const dy = touchEndY - touchStartY;
+
+      if (Math.abs(dx) > Math.abs(dy)) {
+        if (Math.abs(dx) > SWIPE_THRESHOLD) {
+          if (dx > 0) moveRight();
+          else moveLeft();
+        }
+      } else {
+        if (Math.abs(dy) > SWIPE_THRESHOLD) {
+          if (dy < 0) jump();
+          else slide();
+        }
+      }
+    }, { passive: true });
+
+    // Virtual Buttons
+    document.getElementById('btnTouchLeft').addEventListener('pointerdown', (e) => { e.preventDefault(); moveLeft(); });
+    document.getElementById('btnTouchRight').addEventListener('pointerdown', (e) => { e.preventDefault(); moveRight(); });
+    document.getElementById('btnTouchJump').addEventListener('pointerdown', (e) => { e.preventDefault(); jump(); });
+    document.getElementById('btnTouchSlide').addEventListener('pointerdown', (e) => { e.preventDefault(); slide(); });
+
+    // Menu Buttons
+    btnStartGame.addEventListener('click', resetGame);
+    btnRestartGame.addEventListener('click', resetGame);
+
+    // Pause Controls
+    btnPause.addEventListener('click', () => {
+      if (!isPlaying) return;
+      isPaused = true;
+      pauseScreen.classList.remove('hidden');
+    });
+
+    btnResume.addEventListener('click', () => {
+      isPaused = false;
+      pauseScreen.classList.add('hidden');
+    });
+
+    btnQuit.addEventListener('click', () => {
+      isPaused = false;
+      isPlaying = false;
+      pauseScreen.classList.add('hidden');
+      menuScreen.classList.remove('hidden');
+    });
+
+    // Start on load
+    window.onload = function() {
+      initThreeScene();
+      animate();
+    };
+  </script>
+</body>
+</html>
