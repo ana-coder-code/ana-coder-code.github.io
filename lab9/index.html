@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Paparan Gambar - ELSCARON</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      background: radial-gradient(circle at top, #1e293b, #090d16);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      color: #f1f5f9;
+    }
+    .container {
+      max-width: 850px;
+      width: 100%;
+      background: rgba(30, 41, 59, 0.7);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 18px;
+      padding: 24px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+    }
+    .header {
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding-bottom: 14px;
+    }
+    .title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      color: #38bdf8;
+    }
+    .badge {
+      background: rgba(56, 189, 248, 0.15);
+      color: #38bdf8;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 500;
+    }
+    .image-wrapper {
+      position: relative;
+      width: 100%;
+      background: #000;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 200px;
+    }
+    img {
+      max-width: 100%;
+      height: auto;
+      max-height: 75vh;
+      display: block;
+      object-fit: contain;
+    }
+    .footer-note {
+      margin-top: 14px;
+      font-size: 0.85rem;
+      color: #94a3b8;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <div class="header">
+      <div class="title">LAB 9 - ELSCARON</div>
+      <div class="badge">Image Viewer</div>
+    </div>
+
+    <div class="image-wrapper">
+      <img src="ELSCARON.jpeg" alt="ELSCARON" onerror="this.onerror=null; this.src='ELSCARON.jpg';">
+    </div>
+
+    <p class="footer-note">Memaparkan imej <code>ELSCARON</code> dari folder <code>lab9</code></p>
+  </div>
+
+</body>
+</html>
